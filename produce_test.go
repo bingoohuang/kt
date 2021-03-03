@@ -1,17 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/require"
 )
 
 func TestHashCode(t *testing.T) {
-
 	data := []struct {
 		in       string
 		expected int32
@@ -33,7 +32,7 @@ func TestHashCode(t *testing.T) {
 			expected: 8984,
 		},
 		{
-			in:       "😼", //non-bmp character, 4bytes in utf16
+			in:       "😼", // non-bmp character, 4bytes in utf16
 			expected: 1772959,
 		},
 		{
@@ -59,7 +58,6 @@ func TestHashCode(t *testing.T) {
 }
 
 func TestHashCodePartition(t *testing.T) {
-
 	data := []struct {
 		key        string
 		partitions int32
@@ -126,8 +124,8 @@ func TestProduceParseArgs(t *testing.T) {
 	expectedBrokers := []string{givenBroker}
 	target := &produceCmd{}
 
-	os.Setenv(ENV_TOPIC, expectedTopic)
-	os.Setenv(ENV_BROKERS, givenBroker)
+	os.Setenv(EnvTopic, expectedTopic)
+	os.Setenv(EnvBrokers, givenBroker)
 
 	target.parseArgs([]string{})
 	if target.topic != expectedTopic ||
@@ -143,8 +141,8 @@ func TestProduceParseArgs(t *testing.T) {
 	}
 
 	// default brokers to localhost:9092
-	os.Setenv(ENV_TOPIC, "")
-	os.Setenv(ENV_BROKERS, "")
+	os.Setenv(EnvTopic, "")
+	os.Setenv(EnvBrokers, "")
 	expectedBrokers = []string{"localhost:9092"}
 
 	target.parseArgs([]string{"-topic", expectedTopic})
@@ -161,8 +159,8 @@ func TestProduceParseArgs(t *testing.T) {
 	}
 
 	// command line arg wins
-	os.Setenv(ENV_TOPIC, "BLUBB")
-	os.Setenv(ENV_BROKERS, "BLABB")
+	os.Setenv(EnvTopic, "BLUBB")
+	os.Setenv(EnvBrokers, "BLABB")
 	expectedBrokers = []string{givenBroker}
 
 	target.parseArgs([]string{"-topic", expectedTopic, "-brokers", givenBroker})
@@ -198,7 +196,8 @@ func newMessage(key, value string, partition int32) message {
 }
 
 func TestMakeSaramaMessage(t *testing.T) {
-	target := &produceCmd{decodeKey: "string", decodeValue: "string"}
+	decoder := ParseStringDecoder("string")
+	target := &produceCmd{keyDecoder: decoder, valDecoder: decoder}
 	key, value := "key", "value"
 	msg := message{Key: &key, Value: &value}
 	actual, err := target.makeSaramaMessage(msg)
@@ -206,7 +205,8 @@ func TestMakeSaramaMessage(t *testing.T) {
 	require.Equal(t, []byte(key), actual.Key)
 	require.Equal(t, []byte(value), actual.Value)
 
-	target.decodeKey, target.decodeValue = "hex", "hex"
+	decoder = ParseStringDecoder("hex")
+	target.keyDecoder, target.valDecoder = decoder, decoder
 	key, value = "41", "42"
 	msg = message{Key: &key, Value: &value}
 	actual, err = target.makeSaramaMessage(msg)
@@ -214,7 +214,8 @@ func TestMakeSaramaMessage(t *testing.T) {
 	require.Equal(t, []byte("A"), actual.Key)
 	require.Equal(t, []byte("B"), actual.Value)
 
-	target.decodeKey, target.decodeValue = "base64", "base64"
+	decoder = ParseStringDecoder("base64")
+	target.keyDecoder, target.valDecoder = decoder, decoder
 	key, value = "aGFucw==", "cGV0ZXI="
 	msg = message{Key: &key, Value: &value}
 	actual, err = target.makeSaramaMessage(msg)
@@ -279,7 +280,7 @@ func TestDeserializeLines(t *testing.T) {
 			t.Errorf("did not receive output in time")
 		case actual := <-out:
 			if !(reflect.DeepEqual(d.expected, actual)) {
-				t.Errorf(spew.Sprintf("\nexpected %#v\nactual   %#v", d.expected, actual))
+				t.Errorf(fmt.Sprintf("\nexpected %#v\nactual   %#v", d.expected, actual))
 			}
 		}
 	}

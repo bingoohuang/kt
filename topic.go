@@ -57,22 +57,22 @@ type partition struct {
 	ISRs         []int32 `json:"isrs,omitempty"`
 }
 
-func (cmd *topicCmd) parseFlags(as []string) topicArgs {
+func (c *topicCmd) parseFlags(as []string) topicArgs {
 	var (
-		args  topicArgs
+		a     topicArgs
 		flags = flag.NewFlagSet("topic", flag.ContinueOnError)
 	)
 
-	flags.StringVar(&args.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted.")
-	flags.StringVar(&args.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", ENV_AUTH))
-	flags.BoolVar(&args.partitions, "partitions", false, "Include information per partition.")
-	flags.BoolVar(&args.leaders, "leaders", false, "Include leader information per partition.")
-	flags.BoolVar(&args.replicas, "replicas", false, "Include replica ids per partition.")
-	flags.BoolVar(&args.config, "config", false, "Include topic configuration.")
-	flags.StringVar(&args.filter, "filter", "", "Regex to filter topics by name.")
-	flags.BoolVar(&args.verbose, "verbose", false, "More verbose logging to stderr.")
-	flags.BoolVar(&args.pretty, "pretty", true, "Control output pretty printing.")
-	flags.StringVar(&args.version, "version", "", "Kafka protocol version")
+	flags.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted.")
+	flags.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", EnvAuth))
+	flags.BoolVar(&a.partitions, "partitions", false, "Include information per partition.")
+	flags.BoolVar(&a.leaders, "leaders", false, "Include leader information per partition.")
+	flags.BoolVar(&a.replicas, "replicas", false, "Include replica ids per partition.")
+	flags.BoolVar(&a.config, "config", false, "Include topic configuration.")
+	flags.StringVar(&a.filter, "filter", "", "Regex to filter topics by name.")
+	flags.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
+	flags.BoolVar(&a.pretty, "pretty", true, "Control output pretty printing.")
+	flags.StringVar(&a.version, "version", "", "Kafka protocol version")
 	flags.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage of topic:")
 		flags.PrintDefaults()
@@ -86,16 +86,16 @@ func (cmd *topicCmd) parseFlags(as []string) topicArgs {
 		os.Exit(2)
 	}
 
-	return args
+	return a
 }
 
-func (cmd *topicCmd) parseArgs(as []string) {
+func (c *topicCmd) parseArgs(as []string) {
 	var (
 		err error
 		re  *regexp.Regexp
 
-		args       = cmd.parseFlags(as)
-		envBrokers = os.Getenv(ENV_BROKERS)
+		args       = c.parseFlags(as)
+		envBrokers = os.Getenv(EnvBrokers)
 	)
 	if args.brokers == "" {
 		if envBrokers != "" {
@@ -104,10 +104,10 @@ func (cmd *topicCmd) parseArgs(as []string) {
 			args.brokers = "localhost:9092"
 		}
 	}
-	cmd.brokers = strings.Split(args.brokers, ",")
-	for i, b := range cmd.brokers {
+	c.brokers = strings.Split(args.brokers, ",")
+	for i, b := range c.brokers {
 		if !strings.Contains(b, ":") {
-			cmd.brokers[i] = b + ":9092"
+			c.brokers[i] = b + ":9092"
 		}
 	}
 
@@ -115,92 +115,94 @@ func (cmd *topicCmd) parseArgs(as []string) {
 		failf("invalid regex for filter err=%s", err)
 	}
 
-	readAuthFile(args.auth, os.Getenv(ENV_AUTH), &cmd.auth)
+	readAuthFile(args.auth, os.Getenv(EnvAuth), &c.auth)
 
-	cmd.filter = re
-	cmd.partitions = args.partitions
-	cmd.leaders = args.leaders
-	cmd.replicas = args.replicas
-	cmd.config = args.config
-	cmd.pretty = args.pretty
-	cmd.verbose = args.verbose
-	cmd.version = kafkaVersion(args.version)
+	c.filter = re
+	c.partitions = args.partitions
+	c.leaders = args.leaders
+	c.replicas = args.replicas
+	c.config = args.config
+	c.pretty = args.pretty
+	c.verbose = args.verbose
+	c.version = kafkaVersion(args.version)
 }
 
-func (cmd *topicCmd) connect() {
+func (c *topicCmd) connect() {
 	var (
 		err error
 		usr *user.User
 		cfg = sarama.NewConfig()
 	)
 
-	cfg.Version = cmd.version
+	cfg.Version = c.version
 
 	if usr, err = user.Current(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to read current user err=%v", err)
 	}
 	cfg.ClientID = "kt-topic-" + sanitizeUsername(usr.Username)
-	if cmd.verbose {
+	if c.verbose {
 		fmt.Fprintf(os.Stderr, "sarama client configuration %#v\n", cfg)
 	}
 
-	setupAuth(cmd.auth, cfg)
+	if err := setupAuth(c.auth, cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to setupAuth err=%v", err)
+	}
 
-	if cmd.client, err = sarama.NewClient(cmd.brokers, cfg); err != nil {
+	if c.client, err = sarama.NewClient(c.brokers, cfg); err != nil {
 		failf("failed to create client err=%v", err)
 	}
-	if cmd.admin, err = sarama.NewClusterAdmin(cmd.brokers, cfg); err != nil {
+	if c.admin, err = sarama.NewClusterAdmin(c.brokers, cfg); err != nil {
 		failf("failed to create cluster admin err=%v", err)
 	}
 }
 
-func (cmd *topicCmd) run(as []string) {
+func (c *topicCmd) run(as []string) {
 	var (
 		err error
 		all []string
 		out = make(chan printContext)
 	)
 
-	cmd.parseArgs(as)
-	if cmd.verbose {
+	c.parseArgs(as)
+	if c.verbose {
 		sarama.Logger = log.New(os.Stderr, "", log.LstdFlags)
 	}
 
-	cmd.connect()
-	defer cmd.client.Close()
-	defer cmd.admin.Close()
+	c.connect()
+	defer c.client.Close()
+	defer c.admin.Close()
 
-	if all, err = cmd.client.Topics(); err != nil {
+	if all, err = c.client.Topics(); err != nil {
 		failf("failed to read topics err=%v", err)
 	}
 
 	topics := []string{}
 	for _, a := range all {
-		if cmd.filter.MatchString(a) {
+		if c.filter.MatchString(a) {
 			topics = append(topics, a)
 		}
 	}
 
-	go print(out, cmd.pretty)
+	go print(out, c.pretty)
 
 	var wg sync.WaitGroup
 	for _, tn := range topics {
 		wg.Add(1)
 		go func(top string) {
-			cmd.print(top, out)
+			c.print(top, out)
 			wg.Done()
 		}(tn)
 	}
 	wg.Wait()
 }
 
-func (cmd *topicCmd) print(name string, out chan printContext) {
+func (c *topicCmd) print(name string, out chan printContext) {
 	var (
 		top topic
 		err error
 	)
 
-	if top, err = cmd.readTopic(name); err != nil {
+	if top, err = c.readTopic(name); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to read info for topic %s. err=%v\n", name, err)
 		return
 	}
@@ -210,7 +212,7 @@ func (cmd *topicCmd) print(name string, out chan printContext) {
 	<-ctx.done
 }
 
-func (cmd *topicCmd) readTopic(name string) (topic, error) {
+func (c *topicCmd) readTopic(name string) (topic, error) {
 	var (
 		err           error
 		ps            []int32
@@ -219,10 +221,10 @@ func (cmd *topicCmd) readTopic(name string) (topic, error) {
 		configEntries []sarama.ConfigEntry
 	)
 
-	if cmd.config {
+	if c.config {
 
 		resource := sarama.ConfigResource{Name: name, Type: sarama.TopicResource}
-		if configEntries, err = cmd.admin.DescribeConfig(resource); err != nil {
+		if configEntries, err = c.admin.DescribeConfig(resource); err != nil {
 			return top, err
 		}
 
@@ -232,38 +234,38 @@ func (cmd *topicCmd) readTopic(name string) (topic, error) {
 		}
 	}
 
-	if !cmd.partitions {
+	if !c.partitions {
 		return top, nil
 	}
 
-	if ps, err = cmd.client.Partitions(name); err != nil {
+	if ps, err = c.client.Partitions(name); err != nil {
 		return top, err
 	}
 
 	for _, p := range ps {
 		np := partition{Id: p}
 
-		if np.OldestOffset, err = cmd.client.GetOffset(name, p, sarama.OffsetOldest); err != nil {
+		if np.OldestOffset, err = c.client.GetOffset(name, p, sarama.OffsetOldest); err != nil {
 			return top, err
 		}
 
-		if np.NewestOffset, err = cmd.client.GetOffset(name, p, sarama.OffsetNewest); err != nil {
+		if np.NewestOffset, err = c.client.GetOffset(name, p, sarama.OffsetNewest); err != nil {
 			return top, err
 		}
 
-		if cmd.leaders {
-			if led, err = cmd.client.Leader(name, p); err != nil {
+		if c.leaders {
+			if led, err = c.client.Leader(name, p); err != nil {
 				return top, err
 			}
 			np.Leader = led.Addr()
 		}
 
-		if cmd.replicas {
-			if np.Replicas, err = cmd.client.Replicas(name, p); err != nil {
+		if c.replicas {
+			if np.Replicas, err = c.client.Replicas(name, p); err != nil {
 				return top, err
 			}
 
-			if np.ISRs, err = cmd.client.InSyncReplicas(name, p); err != nil {
+			if np.ISRs, err = c.client.InSyncReplicas(name, p); err != nil {
 				return top, err
 			}
 		}
@@ -277,4 +279,4 @@ func (cmd *topicCmd) readTopic(name string) (topic, error) {
 var topicDocString = fmt.Sprintf(`
 The values for -brokers can also be set via the environment variable %s respectively.
 The values supplied on the command line win over environment variable values.`,
-	ENV_BROKERS)
+	EnvBrokers)

@@ -1,38 +1,75 @@
-export SHELL:=/usr/bin/env bash -O extglob -c
-export GO111MODULE:=on
-export OS=$(shell uname | tr '[:upper:]' '[:lower:]')
+.PHONY: default
+all: default
 
-build: GOOS ?= ${OS}
-build: GOARCH ?= amd64
-build:
-	rm -f kt
-	GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags "-X main.buildTime=`date --iso-8601=s` -X main.buildVersion=`git rev-parse HEAD | cut -c-7`" .
+app=$(notdir $(shell pwd))
 
-release-linux: testing
-	GOOS=linux $(MAKE) build
-	tar Jcf kt-`git describe --abbrev=0 --tags`-linux-amd64.txz kt
+default: install
 
-release-darwin:
-	GOOS=darwin $(MAKE) build
-	tar Jcf kt-`git describe --abbrev=0 --tags`-darwin-amd64.txz kt
+tool:
+	go get github.com/securego/gosec/cmd/gosec
+	go get github.com/bingoohuang/pkger/cmd/pkger@master
 
-release: testing clean release-linux release-darwin
+sec:
+	@gosec ./...
+	@echo "[OK] Go security check was completed!"
 
-dep-up:
-	docker-compose -f ./test-dependencies.yml up -d --remove-orphan 
-	sleep 4
+init:
+	export GOPROXY=https://goproxy.cn
 
-dep-down:
-	docker-compose -f ./test-dependencies.yml down
+lint:
+	#golangci-lint run --enable-all
+	golangci-lint run ./...
 
-testing: dep-up test dep-down
+fmt:
+	gofumports -w .
+	gofumpt -w .
+	gofmt -s -w .
+	go mod tidy
+	go fmt ./...
+	revive .
+	goimports -w .
 
-test: clean
-	go test -v -vet=all -failfast
+install: init
+	go install -ldflags="-s -w"
+	ls -lh $$(which ${app})
+
+linux: init
+	GOOS=linux GOARCH=amd64 go install -ldflags="-s -w" ./...
+
+upx:
+	ls -lh $$(which ${app})
+	upx $$(which ${app})
+	ls -lh $$(which ${app})
+	ls -lh ~/go/bin/linux_amd64/${app}
+	upx ~/go/bin/linux_amd64/${app}
+	ls -lh ~/go/bin/linux_amd64/${app}
+
+test: init
+	#go test -v ./...
+	go test -v -race ./...
+
+bench: init
+	#go test -bench . ./...
+	go test -tags bench -benchmem -bench . ./...
 
 clean:
-	rm -f kt
-	rm -f kt-*.txz
+	rm coverage.out
 
-run: build
-	./kt
+cover:
+	go test -v -race -coverpkg=./... -coverprofile=coverage.out ./...
+
+coverview:
+	go tool cover -html=coverage.out
+
+# https://hub.docker.com/_/golang
+# docker run --rm -v "$PWD":/usr/src/myapp -v "$HOME/dockergo":/go -w /usr/src/myapp golang make docker
+# docker run --rm -it -v "$PWD":/usr/src/myapp -w /usr/src/myapp golang bash
+# 静态连接 glibc
+docker:
+	mkdir -f ~/dockergo
+	docker run --rm -v "$$PWD":/usr/src/myapp -v "$$HOME/dockergo":/go -w /usr/src/myapp golang make dockerinstall
+	#upx ~/dockergo/bin/${app}
+	gzip -f ~/dockergo/bin/${app}
+
+dockerinstall:
+	go install -v -x -a -ldflags '-extldflags "-static"' ./...

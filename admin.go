@@ -43,21 +43,19 @@ type adminArgs struct {
 }
 
 func (cmd *adminCmd) parseArgs(as []string) {
-	var (
-		args = cmd.parseFlags(as)
-	)
+	args := cmd.parseFlags(as)
 
 	cmd.verbose = args.verbose
 	cmd.version = kafkaVersion(args.version)
 
-	cmd.timeout = parseTimeout(os.Getenv(ENV_ADMIN_TIMEOUT))
+	cmd.timeout = parseTimeout(os.Getenv(EnvAdminTimeout))
 	if args.timeout != "" {
 		cmd.timeout = parseTimeout(args.timeout)
 	}
 
-	readAuthFile(args.auth, os.Getenv(ENV_AUTH), &cmd.auth)
+	readAuthFile(args.auth, os.Getenv(EnvAuth), &cmd.auth)
 
-	envBrokers := os.Getenv(ENV_BROKERS)
+	envBrokers := os.Getenv(EnvBrokers)
 	if args.brokers == "" {
 		if envBrokers != "" {
 			args.brokers = envBrokers
@@ -105,7 +103,6 @@ func (cmd *adminCmd) run(args []string) {
 
 	if cmd.createTopic != "" {
 		cmd.runCreateTopic()
-
 	} else if cmd.deleteTopic != "" {
 		cmd.runDeleteTopic()
 	} else {
@@ -158,7 +155,7 @@ func (cmd *adminCmd) parseFlags(as []string) adminArgs {
 	flags.BoolVar(&args.verbose, "verbose", false, "More verbose logging to stderr.")
 	flags.StringVar(&args.version, "version", "", "Kafka protocol version")
 	flags.StringVar(&args.timeout, "timeout", "", "Timeout for request to Kafka (default: 3s)")
-	flags.StringVar(&args.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", ENV_AUTH))
+	flags.StringVar(&args.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", EnvAuth))
 
 	flags.StringVar(&args.createTopic, "createtopic", "", "Name of the topic that should be created.")
 	flags.StringVar(&args.topicDetailPath, "topicdetail", "", "Path to JSON encoded topic detail. cf sarama.TopicDetail")
@@ -194,4 +191,4 @@ cf https://godoc.org/github.com/Shopify/sarama#TopicDetail
 A simple way to pass a JSON file is to use a tool like https://github.com/fgeller/jsonify and shell's process substition:
 
 kt admin -createtopic morenews -topicdetail <(jsonify =NumPartitions 1 =ReplicationFactor 1)`,
-	ENV_BROKERS)
+	EnvBrokers)

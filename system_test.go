@@ -30,9 +30,9 @@ func (c *cmd) run(name string, args ...string) (int, string, string) {
 	cmd.Stdout = &stdOut
 	cmd.Stderr = &stdErr
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=localhost:9092", ENV_BROKERS))
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=test-secrets/auth.json", ENV_AUTH))
-	cmd.Env = append(cmd.Env, fmt.Sprintf("GODEBUG=x509ignoreCN=0"))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=localhost:9092", EnvBrokers))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=testdata/test-secrets/auth.json", EnvAuth))
+	cmd.Env = append(cmd.Env, "GODEBUG=x509ignoreCN=0")
 
 	if len(c.in) > 0 {
 		cmd.Stdin = strings.NewReader(c.in)
@@ -45,7 +45,6 @@ func (c *cmd) run(name string, args ...string) (int, string, string) {
 	strErr := stdErr.String()
 
 	return status.ExitStatus(), strOut, strErr
-
 }
 
 func build(t *testing.T) {
@@ -76,7 +75,7 @@ func TestSystem(t *testing.T) {
 	buf, err := json.Marshal(topicDetail)
 	require.NoError(t, err)
 	fnTopicDetail := fmt.Sprintf("topic-detail-%v.json", randomString(6))
-	err = ioutil.WriteFile(fnTopicDetail, buf, 0666)
+	err = ioutil.WriteFile(fnTopicDetail, buf, 0o666)
 	require.NoError(t, err)
 	defer os.RemoveAll(fnTopicDetail)
 

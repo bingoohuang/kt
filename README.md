@@ -263,18 +263,18 @@ each command individually, or set it via the environment variable `KT_AUTH`.
 Required fields:
 
  - `mode`: This needs to be set to `TLS`
- - `client-certificate`: Path to your certificate
- - `client-certificate-key`: Path to your certificate key
- - `ca-certificate`: Path to your CA certificate
+ - `client-cert`: Path to your certificate
+ - `client-cert-key`: Path to your certificate key
+ - `ca-cert`: Path to your CA certificate
 
 Example for an authorization configuration that is used for the system tests:
 
 
     {
         "mode": "TLS",
-        "client-certificate": "test-secrets/kt-test.crt",
-        "client-certificate-key": "test-secrets/kt-test.key",
-        "ca-certificate": "test-secrets/snakeoil-ca-1.crt"
+        "client-cert": "testdata/test-secrets/kt-test.crt",
+        "client-cert-key": "testdata/test-secrets/kt-test.key",
+        "ca-cert": "testdata/test-secrets/snakeoil-ca-1.crt"
     }
 
 ### TLS one-way

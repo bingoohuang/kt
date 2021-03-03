@@ -25,112 +25,125 @@ type produceArgs struct {
 	verbose     bool
 	pretty      bool
 	version     string
-	compression string
+	compress    string
 	literal     bool
-	decodeKey   string
-	decodeValue string
+	decKey      string
+	decVal      string
 	partitioner string
-	bufferSize  int
+	bufSize     int
 }
 
 type message struct {
-	Key       *string `json:"key"`
-	Value     *string `json:"value"`
+	Key       *string `json:"key,omitempty"`
+	Value     *string `json:"value,omitempty"`
+	K         *string `json:"k,omitempty"`
+	V         *string `json:"v,omitempty"`
 	Partition *int32  `json:"partition"`
+	P         *int32  `json:"p"`
 }
 
-func (cmd *produceCmd) read(as []string) produceArgs {
-	var args produceArgs
-	flags := flag.NewFlagSet("produce", flag.ContinueOnError)
-	flags.StringVar(&args.topic, "topic", "", "Topic to produce to (required).")
-	flags.IntVar(&args.partition, "partition", 0, "Partition to produce to (defaults to 0).")
-	flags.StringVar(&args.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
-	flags.StringVar(&args.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", ENV_AUTH))
-	flags.IntVar(&args.batch, "batch", 1, "Max size of a batch before sending it off")
-	flags.DurationVar(&args.timeout, "timeout", 50*time.Millisecond, "Duration to wait for batch to be filled before sending it off")
-	flags.BoolVar(&args.verbose, "verbose", false, "Verbose output")
-	flags.BoolVar(&args.pretty, "pretty", true, "Control output pretty printing.")
-	flags.BoolVar(&args.literal, "literal", false, "Interpret stdin line literally and pass it as value, key as null.")
-	flags.StringVar(&args.version, "version", "", "Kafka protocol version")
-	flags.StringVar(&args.compression, "compression", "", "Kafka message compression codec [gzip|snappy|lz4] (defaults to none)")
-	flags.StringVar(&args.partitioner, "partitioner", "", "Optional partitioner to use. Available: hashCode")
-	flags.StringVar(&args.decodeKey, "decodekey", "string", "Decode message value as (string|hex|base64), defaults to string.")
-	flags.StringVar(&args.decodeValue, "decodevalue", "string", "Decode message value as (string|hex|base64), defaults to string.")
-	flags.IntVar(&args.bufferSize, "buffersize", 16777216, "Buffer size for scanning stdin, defaults to 16777216=16*1024*1024.")
+func (c *produceCmd) read(as []string) produceArgs {
+	var a produceArgs
+	f := flag.NewFlagSet("produce", flag.ContinueOnError)
+	f.StringVar(&a.topic, "topic", "", "Topic to produce to (required).")
+	f.IntVar(&a.partition, "partition", 0, "Partition to produce to (defaults to 0).")
+	f.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 if omitted (defaults to localhost:9092).")
+	f.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", EnvAuth))
+	f.IntVar(&a.batch, "batch", 1, "Max size of a batch before sending it off")
+	f.DurationVar(&a.timeout, "timeout", 50*time.Millisecond, "Duration to wait for batch to be filled before sending it off")
+	f.BoolVar(&a.verbose, "verbose", false, "Verbose output")
+	f.BoolVar(&a.pretty, "pretty", true, "Control output pretty printing.")
+	f.BoolVar(&a.literal, "literal", false, "Interpret stdin line literally and pass it as value, key as null.")
+	f.StringVar(&a.version, "version", "", "Kafka protocol version, like 0.10.0.0")
+	f.StringVar(&a.compress, "compress", "", "Kafka message compress codec [gzip|snappy|lz4], defaults to none")
+	f.StringVar(&a.partitioner, "partitioner", "hashCode", "Optional partitioner. Available: hashCode")
+	f.StringVar(&a.decKey, "dec.key", "string", "Decode message value as (string|hex|base64), defaults to string.")
+	f.StringVar(&a.decVal, "dec.val", "string", "Decode message value as (string|hex|base64), defaults to string.")
+	f.IntVar(&a.bufSize, "buf.size", 16777216, "Buffer size for scanning stdin, defaults to 16777216=16*1024*1024.")
 
-	flags.Usage = func() {
+	f.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage of produce:")
-		flags.PrintDefaults()
+		f.PrintDefaults()
 		fmt.Fprintln(os.Stderr, produceDocString)
 	}
 
-	err := flags.Parse(as)
+	err := f.Parse(as)
 	if err != nil && strings.Contains(err.Error(), "flag: help requested") {
 		os.Exit(0)
 	} else if err != nil {
 		os.Exit(2)
 	}
 
-	return args
+	return a
 }
 
-func (cmd *produceCmd) failStartup(msg string) {
+func (c *produceCmd) failStartup(msg string) {
 	fmt.Fprintln(os.Stderr, msg)
 	failf("use \"kt produce -help\" for more information")
 }
 
-func (cmd *produceCmd) parseArgs(as []string) {
-	args := cmd.read(as)
-	envTopic := os.Getenv(ENV_TOPIC)
-	if args.topic == "" {
+func (c *produceCmd) parseArgs(as []string) {
+	a := c.read(as)
+	envTopic := os.Getenv(EnvTopic)
+	if a.topic == "" {
 		if envTopic == "" {
-			cmd.failStartup("Topic name is required.")
+			c.failStartup("Topic name is required.")
 		} else {
-			args.topic = envTopic
+			a.topic = envTopic
 		}
 	}
-	cmd.topic = args.topic
+	c.topic = a.topic
 
-	readAuthFile(args.auth, os.Getenv(ENV_AUTH), &cmd.auth)
+	readAuthFile(a.auth, os.Getenv(EnvAuth), &c.auth)
 
-	envBrokers := os.Getenv(ENV_BROKERS)
-	if args.brokers == "" {
+	envBrokers := os.Getenv(EnvBrokers)
+	if a.brokers == "" {
 		if envBrokers != "" {
-			args.brokers = envBrokers
+			a.brokers = envBrokers
 		} else {
-			args.brokers = "localhost:9092"
+			a.brokers = "localhost:9092"
 		}
 	}
 
-	cmd.brokers = strings.Split(args.brokers, ",")
-	for i, b := range cmd.brokers {
+	c.brokers = strings.Split(a.brokers, ",")
+	for i, b := range c.brokers {
 		if !strings.Contains(b, ":") {
-			cmd.brokers[i] = b + ":9092"
+			c.brokers[i] = b + ":9092"
 		}
 	}
 
-	if args.decodeValue != "string" && args.decodeValue != "hex" && args.decodeValue != "base64" {
-		cmd.failStartup(fmt.Sprintf(`unsupported decodevalue argument %#v, only string, hex and base64 are supported.`, args.decodeValue))
+	if !anyOf(a.decVal, "string", "hex", "base64") {
+		c.failStartup(fmt.Sprintf(`bad dec.val argument %#v, only allow string/hex/base64.`, a.decVal))
 		return
 	}
-	cmd.decodeValue = args.decodeValue
+	c.valDecoder = ParseStringDecoder(a.decVal)
 
-	if args.decodeKey != "string" && args.decodeKey != "hex" && args.decodeKey != "base64" {
-		cmd.failStartup(fmt.Sprintf(`unsupported decodekey argument %#v, only string, hex and base64 are supported.`, args.decodeValue))
+	if !anyOf(a.decKey, "string", "hex", "base64") {
+		c.failStartup(fmt.Sprintf(`bad dec.key argument %#v, only allow string/hex/base64.`, a.decVal))
 		return
 	}
-	cmd.decodeKey = args.decodeKey
+	c.keyDecoder = ParseStringDecoder(a.decKey)
 
-	cmd.batch = args.batch
-	cmd.timeout = args.timeout
-	cmd.verbose = args.verbose
-	cmd.pretty = args.pretty
-	cmd.literal = args.literal
-	cmd.partition = int32(args.partition)
-	cmd.partitioner = args.partitioner
-	cmd.version = kafkaVersion(args.version)
-	cmd.compression = kafkaCompression(args.compression)
-	cmd.bufferSize = args.bufferSize
+	c.batch = a.batch
+	c.timeout = a.timeout
+	c.verbose = a.verbose
+	c.pretty = a.pretty
+	c.literal = a.literal
+	c.partition = int32(a.partition)
+	c.partitioner = a.partitioner
+	c.version = kafkaVersion(a.version)
+	c.compress = kafkaCompression(a.compress)
+	c.bufSize = a.bufSize
+}
+
+func anyOf(s string, allows ...string) bool {
+	for _, allow := range allows {
+		if s == allow {
+			return true
+		}
+	}
+
+	return false
 }
 
 func kafkaCompression(codecName string) sarama.CompressionCodec {
@@ -145,35 +158,35 @@ func kafkaCompression(codecName string) sarama.CompressionCodec {
 		return sarama.CompressionNone
 	}
 
-	failf("unsupported compression codec %#v - supported: gzip, snappy, lz4", codecName)
+	failf("unsupported compress codec %#v - supported: gzip, snappy, lz4", codecName)
 	panic("unreachable")
 }
 
-func (cmd *produceCmd) findLeaders() {
+func (c *produceCmd) findLeaders() {
 	var (
 		usr *user.User
 		err error
 		res *sarama.MetadataResponse
-		req = sarama.MetadataRequest{Topics: []string{cmd.topic}}
+		req = sarama.MetadataRequest{Topics: []string{c.topic}}
 		cfg = sarama.NewConfig()
 	)
 
 	cfg.Producer.RequiredAcks = sarama.WaitForAll
-	cfg.Version = cmd.version
+	cfg.Version = c.version
 	if usr, err = user.Current(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to read current user err=%v", err)
 	}
 	cfg.ClientID = "kt-produce-" + sanitizeUsername(usr.Username)
-	if cmd.verbose {
+	if c.verbose {
 		fmt.Fprintf(os.Stderr, "sarama client configuration %#v\n", cfg)
 	}
 
-	if err = setupAuth(cmd.auth, cfg); err != nil {
+	if err = setupAuth(c.auth, cfg); err != nil {
 		failf("failed to setup auth err=%v", err)
 	}
 
 loop:
-	for _, addr := range cmd.brokers {
+	for _, addr := range c.brokers {
 		broker := sarama.NewBroker(addr)
 		if err = broker.Open(cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to open broker connection to %v. err=%s\n", addr, err)
@@ -195,13 +208,13 @@ loop:
 		}
 
 		for _, tm := range res.Topics {
-			if tm.Name == cmd.topic {
+			if tm.Name == c.topic {
 				if tm.Err != sarama.ErrNoError {
 					fmt.Fprintf(os.Stderr, "Failed to get metadata from %#v. err=%v\n", addr, tm.Err)
 					continue loop
 				}
 
-				cmd.leaders = map[int32]*sarama.Broker{}
+				c.leaders = map[int32]*sarama.Broker{}
 				for _, pm := range tm.Partitions {
 					b, ok := brokers[pm.Leader]
 					if !ok {
@@ -215,7 +228,7 @@ loop:
 						failf("failed to wait for broker connection to open err=%s", err)
 					}
 
-					cmd.leaders[pm.ID] = b
+					c.leaders[pm.ID] = b
 				}
 				return
 			}
@@ -226,33 +239,32 @@ loop:
 }
 
 type produceCmd struct {
-	topic       string
-	brokers     []string
-	auth        authConfig
-	batch       int
-	timeout     time.Duration
-	verbose     bool
-	pretty      bool
-	literal     bool
-	partition   int32
-	version     sarama.KafkaVersion
-	compression sarama.CompressionCodec
-	partitioner string
-	decodeKey   string
-	decodeValue string
-	bufferSize  int
+	topic                  string
+	brokers                []string
+	auth                   authConfig
+	batch                  int
+	timeout                time.Duration
+	verbose                bool
+	pretty                 bool
+	literal                bool
+	partition              int32
+	version                sarama.KafkaVersion
+	compress               sarama.CompressionCodec
+	partitioner            string
+	keyDecoder, valDecoder StringDecoder
+	bufSize                int
 
 	leaders map[int32]*sarama.Broker
 }
 
-func (cmd *produceCmd) run(as []string) {
-	cmd.parseArgs(as)
-	if cmd.verbose {
+func (c *produceCmd) run(as []string) {
+	c.parseArgs(as)
+	if c.verbose {
 		sarama.Logger = log.New(os.Stderr, "", log.LstdFlags)
 	}
 
-	defer cmd.close()
-	cmd.findLeaders()
+	defer c.close()
+	c.findLeaders()
 	stdin := make(chan string)
 	lines := make(chan string)
 	messages := make(chan message)
@@ -260,18 +272,18 @@ func (cmd *produceCmd) run(as []string) {
 	out := make(chan printContext)
 	q := make(chan struct{})
 
-	go readStdinLines(cmd.bufferSize, stdin)
-	go print(out, cmd.pretty)
+	go readStdinLines(c.bufSize, stdin)
+	go print(out, c.pretty)
 
 	go listenForInterrupt(q)
-	go cmd.readInput(q, stdin, lines)
-	go cmd.deserializeLines(lines, messages, int32(len(cmd.leaders)))
-	go cmd.batchRecords(messages, batchedMessages)
-	cmd.produce(batchedMessages, out)
+	go c.readInput(q, stdin, lines)
+	go c.deserializeLines(lines, messages, int32(len(c.leaders)))
+	go c.batchRecords(messages, batchedMessages)
+	c.produce(batchedMessages, out)
 }
 
-func (cmd *produceCmd) close() {
-	for _, b := range cmd.leaders {
+func (c *produceCmd) close() {
+	for _, b := range c.leaders {
 		var (
 			connected bool
 			err       error
@@ -292,53 +304,51 @@ func (cmd *produceCmd) close() {
 	}
 }
 
-func (cmd *produceCmd) deserializeLines(in chan string, out chan message, partitionCount int32) {
+func (c *produceCmd) deserializeLines(in chan string, out chan message, partitionCount int32) {
 	defer func() { close(out) }()
-	for {
-		select {
-		case l, ok := <-in:
-			if !ok {
-				return
-			}
-			var msg message
+	for l := range in {
+		var msg message
 
-			switch {
-			case cmd.literal:
-				msg.Value = &l
-				msg.Partition = &cmd.partition
-			default:
-				if err := json.Unmarshal([]byte(l), &msg); err != nil {
-					if cmd.verbose {
-						fmt.Fprintf(os.Stderr, "Failed to unmarshal input [%v], falling back to defaults. err=%v\n", l, err)
-					}
-					var v *string = &l
-					if len(l) == 0 {
-						v = nil
-					}
-					msg = message{Key: nil, Value: v}
+		switch {
+		case c.literal:
+			msg.Value = &l
+			msg.Partition = &c.partition
+		default:
+			if err := json.Unmarshal([]byte(l), &msg); err != nil {
+				if c.verbose {
+					fmt.Fprintf(os.Stderr, "Failed to unmarshal input [%v], falling back to defaults. err=%v\n", l, err)
 				}
+				v := &l
+				if len(l) == 0 {
+					v = nil
+				}
+				msg = message{Value: v}
 			}
+		}
 
+		if msg.Partition == nil && msg.P != nil {
+			msg.Partition = msg.P
+		}
+
+		if msg.Partition == nil {
 			var part int32 = 0
-			if msg.Key != nil && cmd.partitioner == "hashCode" {
+			if msg.Key != nil && c.partitioner == "hashCode" {
 				part = hashCodePartition(*msg.Key, partitionCount)
 			}
-			if msg.Partition == nil {
-				msg.Partition = &part
-			}
-
-			out <- msg
+			msg.Partition = &part
 		}
+
+		out <- msg
 	}
 }
 
-func (cmd *produceCmd) batchRecords(in chan message, out chan []message) {
+func (c *produceCmd) batchRecords(in chan message, out chan []message) {
 	defer func() { close(out) }()
 
-	messages := []message{}
+	var messages []message
 	send := func() {
 		out <- messages
-		messages = []message{}
+		messages = messages[:0]
 	}
 
 	for {
@@ -350,10 +360,10 @@ func (cmd *produceCmd) batchRecords(in chan message, out chan []message) {
 			}
 
 			messages = append(messages, m)
-			if len(messages) > 0 && len(messages) >= cmd.batch {
+			if len(messages) > 0 && len(messages) >= c.batch {
 				send()
 			}
-		case <-time.After(cmd.timeout):
+		case <-time.After(c.timeout):
 			if len(messages) > 0 {
 				send()
 			}
@@ -366,43 +376,48 @@ type partitionProduceResult struct {
 	count int64
 }
 
-func (cmd *produceCmd) makeSaramaMessage(msg message) (*sarama.Message, error) {
+type StringDecoder func(s string) ([]byte, error)
+
+func ParseStringDecoder(decoder string) StringDecoder {
+	switch decoder {
+	case "hex":
+		return hex.DecodeString
+	case "base64":
+		return base64.StdEncoding.DecodeString
+	default: // string
+		return func(s string) ([]byte, error) { return []byte(s), nil }
+	}
+}
+
+func FirstNotNil(a ...*string) string {
+	for _, i := range a {
+		if i != nil {
+			return *i
+		}
+	}
+
+	return ""
+}
+
+func (c *produceCmd) makeSaramaMessage(msg message) (*sarama.Message, error) {
 	var (
 		err error
-		sm  = &sarama.Message{Codec: cmd.compression}
+		sm  = &sarama.Message{Codec: c.compress}
 	)
 
-	if msg.Key != nil {
-		switch cmd.decodeKey {
-		case "hex":
-			if sm.Key, err = hex.DecodeString(*msg.Key); err != nil {
-				return sm, fmt.Errorf("failed to decode key as hex string, err=%v", err)
-			}
-		case "base64":
-			if sm.Key, err = base64.StdEncoding.DecodeString(*msg.Key); err != nil {
-				return sm, fmt.Errorf("failed to decode key as base64 string, err=%v", err)
-			}
-		default: // string
-			sm.Key = []byte(*msg.Key)
+	if v := FirstNotNil(msg.Key, msg.K); v != "" {
+		if sm.Key, err = c.keyDecoder(v); err != nil {
+			return sm, fmt.Errorf("failed to decode key as string, err=%v", err)
 		}
 	}
 
-	if msg.Value != nil {
-		switch cmd.decodeValue {
-		case "hex":
-			if sm.Value, err = hex.DecodeString(*msg.Value); err != nil {
-				return sm, fmt.Errorf("failed to decode value as hex string, err=%v", err)
-			}
-		case "base64":
-			if sm.Value, err = base64.StdEncoding.DecodeString(*msg.Value); err != nil {
-				return sm, fmt.Errorf("failed to decode value as base64 string, err=%v", err)
-			}
-		default: // string
-			sm.Value = []byte(*msg.Value)
+	if v := FirstNotNil(msg.Value, msg.V); v != "" {
+		if sm.Value, err = c.valDecoder(v); err != nil {
+			return sm, fmt.Errorf("failed to decode value as string, err=%v", err)
 		}
 	}
 
-	if cmd.version.IsAtLeast(sarama.V0_10_0_0) {
+	if c.version.IsAtLeast(sarama.V0_10_0_0) {
 		sm.Version = 1
 		sm.Timestamp = time.Now()
 	}
@@ -410,7 +425,7 @@ func (cmd *produceCmd) makeSaramaMessage(msg message) (*sarama.Message, error) {
 	return sm, nil
 }
 
-func (cmd *produceCmd) produceBatch(leaders map[int32]*sarama.Broker, batch []message, out chan printContext) error {
+func (c *produceCmd) produceBatch(leaders map[int32]*sarama.Broker, batch []message, out chan printContext) error {
 	requests := map[*sarama.Broker]*sarama.ProduceRequest{}
 	for _, msg := range batch {
 		broker, ok := leaders[*msg.Partition]
@@ -423,11 +438,11 @@ func (cmd *produceCmd) produceBatch(leaders map[int32]*sarama.Broker, batch []me
 			requests[broker] = req
 		}
 
-		sm, err := cmd.makeSaramaMessage(msg)
+		sm, err := c.makeSaramaMessage(msg)
 		if err != nil {
 			return err
 		}
-		req.AddMessage(cmd.topic, *msg.Partition, sm)
+		req.AddMessage(c.topic, *msg.Partition, sm)
 	}
 
 	for broker, req := range requests {
@@ -438,7 +453,6 @@ func (cmd *produceCmd) produceBatch(leaders map[int32]*sarama.Broker, batch []me
 
 		offsets, err := readPartitionOffsetResults(resp)
 		if err != nil {
-
 			return fmt.Errorf("failed to read producer response err=%s", err)
 		}
 
@@ -472,22 +486,16 @@ func readPartitionOffsetResults(resp *sarama.ProduceResponse) (map[int32]partiti
 	return offsets, nil
 }
 
-func (cmd *produceCmd) produce(in chan []message, out chan printContext) {
-	for {
-		select {
-		case b, ok := <-in:
-			if !ok {
-				return
-			}
-			if err := cmd.produceBatch(cmd.leaders, b, out); err != nil {
-				fmt.Fprintln(os.Stderr, err.Error()) // TODO: failf
-				return
-			}
+func (c *produceCmd) produce(in chan []message, out chan printContext) {
+	for b := range in {
+		if err := c.produceBatch(c.leaders, b, out); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error()) // TODO: failf
+			return
 		}
 	}
 }
 
-func (cmd *produceCmd) readInput(q chan struct{}, stdin chan string, out chan string) {
+func (c *produceCmd) readInput(q chan struct{}, stdin chan string, out chan string) {
 	defer func() { close(out) }()
 	for {
 		select {
@@ -526,6 +534,9 @@ Send a single message with a specific key:
   $ echo '{"key": "id-23", "value": "ola", "partition": 0}' | kt produce -topic greetings
   Sent message to partition 0 at offset 3.
 
+  $ echo '{"k": "id-23", "v": "ola", "p": 0}' | kt produce -topic greetings
+  Sent message to partition 0 at offset 3.
+
   $ kt consume -topic greetings -timeout 1s -offsets 0:3-
   {"partition":0,"offset":3,"key":"id-23","message":"ola"}
 
@@ -540,4 +551,4 @@ Keep reading input from stdin until interrupted (via ^C).
   $ kt consume -topic greetings -timeout 1s -offsets 0:4-
   {"partition":0,"offset":4,"key":"hello.","message":"hello."}
   {"partition":0,"offset":5,"key":"bonjour.","message":"bonjour."}
-`, ENV_TOPIC, ENV_BROKERS)
+`, EnvTopic, EnvBrokers)

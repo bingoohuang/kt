@@ -327,7 +327,9 @@ func (cmd *groupCmd) saramaConfig() *sarama.Config {
 	}
 	cfg.ClientID = "kt-group-" + sanitizeUsername(usr.Username)
 
-	setupAuth(cmd.auth, cfg)
+	if err := setupAuth(cmd.auth, cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to setupAuth err=%v", err)
+	}
 
 	return cfg
 }
@@ -343,7 +345,7 @@ func (cmd *groupCmd) parseArgs(as []string) {
 		args = cmd.parseFlags(as)
 	)
 
-	envTopic := os.Getenv(ENV_TOPIC)
+	envTopic := os.Getenv(EnvTopic)
 	if args.topic == "" {
 		args.topic = envTopic
 	}
@@ -355,7 +357,7 @@ func (cmd *groupCmd) parseArgs(as []string) {
 	cmd.offsets = args.offsets
 	cmd.version = kafkaVersion(args.version)
 
-	readAuthFile(args.auth, os.Getenv(ENV_AUTH), &cmd.auth)
+	readAuthFile(args.auth, os.Getenv(EnvAuth), &cmd.auth)
 
 	switch args.partitions {
 	case "", "all":
@@ -405,7 +407,7 @@ func (cmd *groupCmd) parseArgs(as []string) {
 		}
 	}
 
-	envBrokers := os.Getenv(ENV_BROKERS)
+	envBrokers := os.Getenv(EnvBrokers)
 	if args.brokers == "" {
 		if envBrokers != "" {
 			args.brokers = envBrokers
@@ -441,7 +443,7 @@ func (cmd *groupCmd) parseFlags(as []string) groupArgs {
 	flags := flag.NewFlagSet("group", flag.ContinueOnError)
 	flags.StringVar(&args.topic, "topic", "", "Topic to consume (required).")
 	flags.StringVar(&args.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
-	flags.StringVar(&args.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", ENV_AUTH))
+	flags.StringVar(&args.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", EnvAuth))
 	flags.StringVar(&args.group, "group", "", "Consumer group name.")
 	flags.StringVar(&args.filterGroups, "filter-groups", "", "Regex to filter groups.")
 	flags.StringVar(&args.filterTopics, "filter-topics", "", "Regex to filter topics.")
@@ -499,4 +501,4 @@ kt group -reset 23 -topic fav-topic -group specials -partitions 2
 To reset a consumer group's offset for all partitions:
 
 kt group -reset newest -topic fav-topic -group specials -partitions all
-`, ENV_TOPIC, ENV_BROKERS)
+`, EnvTopic, EnvBrokers)

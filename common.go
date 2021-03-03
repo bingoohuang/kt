@@ -22,15 +22,13 @@ import (
 )
 
 const (
-	ENV_AUTH          = "KT_AUTH"
-	ENV_ADMIN_TIMEOUT = "KT_ADMIN_TIMEOUT"
-	ENV_BROKERS       = "KT_BROKERS"
-	ENV_TOPIC         = "KT_TOPIC"
+	EnvAuth         = "KT_AUTH"
+	EnvAdminTimeout = "KT_ADMIN_TIMEOUT"
+	EnvBrokers      = "KT_BROKERS"
+	EnvTopic        = "KT_TOPIC"
 )
 
-var (
-	invalidClientIDCharactersRegExp = regexp.MustCompile(`[^a-zA-Z0-9_-]`)
-)
+var invalidClientIDCharactersRegExp = regexp.MustCompile(`[^a-zA-Z0-9_-]`)
 
 type command interface {
 	run(args []string)
@@ -38,7 +36,7 @@ type command interface {
 
 func listenForInterrupt(q chan struct{}) {
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Kill, os.Interrupt)
+	signal.Notify(signals, os.Interrupt)
 	sig := <-signals
 	fmt.Fprintf(os.Stderr, "received signal %s\n", sig)
 	close(q)
@@ -88,7 +86,7 @@ func print(in <-chan printContext, pretty bool) {
 		marshal = json.Marshal
 	)
 
-	if pretty && terminal.IsTerminal(int(syscall.Stdout)) {
+	if pretty && terminal.IsTerminal(syscall.Stdout) {
 		marshal = func(i interface{}) ([]byte, error) { return json.MarshalIndent(i, "", "  ") }
 	}
 
@@ -218,15 +216,14 @@ func setupCerts(certPath, caPath, keyPath string) (*tls.Config, error) {
 		RootCAs:      caPool,
 		Certificates: []tls.Certificate{clientCert},
 	}
-	bundle.BuildNameToCertificate()
 	return bundle, nil
 }
 
 type authConfig struct {
 	Mode              string `json:"mode"`
-	CACert            string `json:"ca-certificate"`
-	ClientCert        string `json:"client-certificate"`
-	ClientCertKey     string `json:"client-certificate-key"`
+	CACert            string `json:"ca-cert"`
+	ClientCert        string `json:"client-cert"`
+	ClientCertKey     string `json:"client-cert-key"`
 	SASLPlainUser     string `json:"sasl_plain_user"`
 	SASLPlainPassword string `json:"sasl_plain_password"`
 }
@@ -263,18 +260,18 @@ func setupAuthTLS1Way(auth authConfig, saramaCfg *sarama.Config) error {
 
 func setupAuthTLS(auth authConfig, saramaCfg *sarama.Config) error {
 	if auth.CACert == "" || auth.ClientCert == "" || auth.ClientCertKey == "" {
-		return fmt.Errorf("client-certificate, client-certificate-key and ca-certificate are required - got auth=%#v", auth)
+		return fmt.Errorf("client-cert, client-cert-key and ca-cert are required - got auth=%#v", auth)
 	}
 
 	caString, err := ioutil.ReadFile(auth.CACert)
 	if err != nil {
-		return fmt.Errorf("failed to read ca-certificate err=%v", err)
+		return fmt.Errorf("failed to read ca-cert err=%v", err)
 	}
 
 	caPool := x509.NewCertPool()
 	ok := caPool.AppendCertsFromPEM(caString)
 	if !ok {
-		failf("unable to add ca-certificate at %s to certificate pool", auth.CACert)
+		failf("unable to add ca-cert at %s to certificate pool", auth.CACert)
 	}
 
 	clientCert, err := tls.LoadX509KeyPair(auth.ClientCert, auth.ClientCertKey)
@@ -283,8 +280,6 @@ func setupAuthTLS(auth authConfig, saramaCfg *sarama.Config) error {
 	}
 
 	tlsCfg := &tls.Config{RootCAs: caPool, Certificates: []tls.Certificate{clientCert}}
-	tlsCfg.BuildNameToCertificate()
-
 	saramaCfg.Net.TLS.Enable = true
 	saramaCfg.Net.TLS.Config = tlsCfg
 
