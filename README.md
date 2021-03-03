@@ -6,7 +6,7 @@ Some reasons why you might be interested:
 * Display topic information (e.g., with partition offset and leader info).
 * Modify consumer group offsets (e.g., resetting or manually setting offsets per topic and per partition).
 * JSON output for easy consumption with tools like [kp](https://github.com/echojc/kp) or [jq](https://stedolan.github.io/jq/).
-* JSON input to facilitate automation via tools like [jsonify](https://github.com/fgeller/jsonify).
+* JSON input to facilitate automation via tools like [jsonify](https://github.com/bingoohuang/jsonify).
 * Configure brokers, topic and authentication via environment variables `KT_BROKERS`, `KT_TOPIC` and `KT_AUTH`.
 * Fast start up time.
 * No buffering of output.
