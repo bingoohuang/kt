@@ -133,26 +133,31 @@ func (c *consumeCmd) parseArgs(as []string) {
 		return
 	}
 	c.keyEncoder = ParseEncodeBytesFn(args.encodeKey)
-
-	envBrokers := os.Getenv(EnvBrokers)
-	if args.brokers == "" {
-		if envBrokers != "" {
-			args.brokers = envBrokers
-		} else {
-			args.brokers = "localhost:9092"
-		}
-	}
-	c.brokers = strings.Split(args.brokers, ",")
-	for i, b := range c.brokers {
-		if !strings.Contains(b, ":") {
-			c.brokers[i] = b + ":9092"
-		}
-	}
+	c.brokers = parseBrokers(args.brokers)
 
 	c.offsets, err = parseOffsets(args.offsets)
 	if err != nil {
 		c.failStartup(fmt.Sprintf("%s", err))
 	}
+}
+
+func parseBrokers(argBrokers string) []string {
+	envBrokers := os.Getenv(EnvBrokers)
+	if argBrokers == "" {
+		if envBrokers != "" {
+			argBrokers = envBrokers
+		} else {
+			argBrokers = "localhost:9092"
+		}
+	}
+	brokers := strings.Split(argBrokers, ",")
+	for i, b := range brokers {
+		if !strings.Contains(b, ":") {
+			brokers[i] = b + ":9092"
+		}
+	}
+
+	return brokers
 }
 
 // parseOffsets parses a set of partition-offset specifiers in the following

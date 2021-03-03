@@ -55,20 +55,7 @@ func (cmd *adminCmd) parseArgs(as []string) {
 
 	readAuthFile(args.auth, os.Getenv(EnvAuth), &cmd.auth)
 
-	envBrokers := os.Getenv(EnvBrokers)
-	if args.brokers == "" {
-		if envBrokers != "" {
-			args.brokers = envBrokers
-		} else {
-			args.brokers = "localhost:9092"
-		}
-	}
-	cmd.brokers = strings.Split(args.brokers, ",")
-	for i, b := range cmd.brokers {
-		if !strings.Contains(b, ":") {
-			cmd.brokers[i] = b + ":9092"
-		}
-	}
+	cmd.brokers = parseBrokers(args.brokers)
 
 	cmd.validateOnly = args.validateOnly
 	cmd.createTopic = args.createTopic

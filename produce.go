@@ -96,21 +96,7 @@ func (c *produceCmd) parseArgs(as []string) {
 
 	readAuthFile(a.auth, os.Getenv(EnvAuth), &c.auth)
 
-	envBrokers := os.Getenv(EnvBrokers)
-	if a.brokers == "" {
-		if envBrokers != "" {
-			a.brokers = envBrokers
-		} else {
-			a.brokers = "localhost:9092"
-		}
-	}
-
-	c.brokers = strings.Split(a.brokers, ",")
-	for i, b := range c.brokers {
-		if !strings.Contains(b, ":") {
-			c.brokers[i] = b + ":9092"
-		}
-	}
+	c.brokers = parseBrokers(a.brokers)
 
 	if !anyOf(a.decVal, "string", "hex", "base64") {
 		c.failStartup(fmt.Sprintf(`bad dec.val argument %#v, only allow string/hex/base64.`, a.decVal))

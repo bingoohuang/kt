@@ -94,22 +94,10 @@ func (c *topicCmd) parseArgs(as []string) {
 		err error
 		re  *regexp.Regexp
 
-		args       = c.parseFlags(as)
-		envBrokers = os.Getenv(EnvBrokers)
+		args = c.parseFlags(as)
 	)
-	if args.brokers == "" {
-		if envBrokers != "" {
-			args.brokers = envBrokers
-		} else {
-			args.brokers = "localhost:9092"
-		}
-	}
-	c.brokers = strings.Split(args.brokers, ",")
-	for i, b := range c.brokers {
-		if !strings.Contains(b, ":") {
-			c.brokers[i] = b + ":9092"
-		}
-	}
+
+	c.brokers = parseBrokers(args.brokers)
 
 	if re, err = regexp.Compile(args.filter); err != nil {
 		failf("invalid regex for filter err=%s", err)
