@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/user"
 	"regexp"
 	"strings"
 	"sync"
@@ -58,28 +57,26 @@ type partition struct {
 }
 
 func (c *topicCmd) parseFlags(as []string) topicArgs {
-	var (
-		a     topicArgs
-		flags = flag.NewFlagSet("topic", flag.ContinueOnError)
-	)
+	var a topicArgs
 
-	flags.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted.")
-	flags.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
-	flags.BoolVar(&a.partitions, "partitions", false, "Include information per partition.")
-	flags.BoolVar(&a.leaders, "leaders", false, "Include leader information per partition.")
-	flags.BoolVar(&a.replicas, "replicas", false, "Include replica ids per partition.")
-	flags.BoolVar(&a.config, "config", false, "Include topic configuration.")
-	flags.StringVar(&a.filter, "filter", "", "Regex to filter topics by name.")
-	flags.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
-	flags.BoolVar(&a.pretty, "pretty", true, "Control output pretty printing.")
-	flags.StringVar(&a.version, "version", "", "Kafka protocol version")
-	flags.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage of topic:")
-		flags.PrintDefaults()
-		fmt.Fprintln(os.Stderr, topicDocString)
+	f := flag.NewFlagSet("topic", flag.ContinueOnError)
+	f.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted.")
+	f.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
+	f.BoolVar(&a.partitions, "partitions", false, "Include information per partition.")
+	f.BoolVar(&a.leaders, "leaders", false, "Include leader information per partition.")
+	f.BoolVar(&a.replicas, "replicas", false, "Include replica ids per partition.")
+	f.BoolVar(&a.config, "config", false, "Include topic configuration.")
+	f.StringVar(&a.filter, "filter", "", "Regex to filter topics by name.")
+	f.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
+	f.BoolVar(&a.pretty, "pretty", true, "Control output pretty printing.")
+	f.StringVar(&a.version, "version", "", "Kafka protocol version")
+	f.Usage = func() {
+		fmt.Fprint(os.Stderr, "Usage of topic:")
+		f.PrintDefaults()
+		fmt.Fprint(os.Stderr, topicDocString)
 	}
 
-	err := flags.Parse(as)
+	err := f.Parse(as)
 	if err != nil && strings.Contains(err.Error(), "flag: help requested") {
 		os.Exit(0)
 	} else if err != nil {
@@ -116,24 +113,17 @@ func (c *topicCmd) parseArgs(as []string) {
 }
 
 func (c *topicCmd) connect() {
-	var (
-		err error
-		usr *user.User
-		cfg = sarama.NewConfig()
-	)
+	var err error
 
+	cfg := sarama.NewConfig()
 	cfg.Version = c.version
-
-	if usr, err = user.Current(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to read current user err=%v", err)
-	}
-	cfg.ClientID = "kt-topic-" + sanitizeUsername(usr.Username)
+	cfg.ClientID = "kt-topic-" + currentUserName()
 	if c.verbose {
-		fmt.Fprintf(os.Stderr, "sarama client configuration %#v\n", cfg)
+		log.Printf("sarama client configuration %#v\n", cfg)
 	}
 
 	if err := setupAuth(c.auth, cfg); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to setupAuth err=%v", err)
+		log.Printf("Failed to setupAuth err=%v", err)
 	}
 
 	if c.client, err = sarama.NewClient(c.brokers, cfg); err != nil {
@@ -145,12 +135,6 @@ func (c *topicCmd) connect() {
 }
 
 func (c *topicCmd) run(as []string) {
-	var (
-		err error
-		all []string
-		out = make(chan printContext)
-	)
-
 	c.parseArgs(as)
 	if c.verbose {
 		sarama.Logger = log.New(os.Stderr, "", log.LstdFlags)
@@ -160,17 +144,20 @@ func (c *topicCmd) run(as []string) {
 	defer c.client.Close()
 	defer c.admin.Close()
 
+	var all []string
+	var err error
 	if all, err = c.client.Topics(); err != nil {
 		failf("failed to read topics err=%v", err)
 	}
 
-	topics := []string{}
+	var topics []string
 	for _, a := range all {
 		if c.filter.MatchString(a) {
 			topics = append(topics, a)
 		}
 	}
 
+	out := make(chan printContext)
 	go print(out, c.pretty)
 
 	var wg sync.WaitGroup
@@ -191,7 +178,7 @@ func (c *topicCmd) print(name string, out chan printContext) {
 	)
 
 	if top, err = c.readTopic(name); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to read info for topic %s. err=%v\n", name, err)
+		log.Printf("failed to read info for topic %s. err=%v", name, err)
 		return
 	}
 

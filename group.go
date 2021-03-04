@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/user"
 	"regexp"
 	"sort"
 	"strconv"
@@ -63,7 +62,7 @@ func (cmd *groupCmd) run(args []string) {
 	}
 
 	brokers := cmd.client.Brokers()
-	fmt.Fprintf(os.Stderr, "found %v brokers\n", len(brokers))
+	log.Printf("found %v brokers\n", len(brokers))
 
 	groups := []string{cmd.group}
 	if cmd.group == "" {
@@ -74,7 +73,7 @@ func (cmd *groupCmd) run(args []string) {
 			}
 		}
 	}
-	fmt.Fprintf(os.Stderr, "found %v groups\n", len(groups))
+	log.Printf("found %v groups\n", len(groups))
 
 	topics := []string{cmd.topic}
 	if cmd.topic == "" {
@@ -85,7 +84,7 @@ func (cmd *groupCmd) run(args []string) {
 			}
 		}
 	}
-	fmt.Fprintf(os.Stderr, "found %v topics\n", len(topics))
+	log.Printf("found %v topics\n", len(topics))
 
 	out := make(chan printContext)
 	go print(out, cmd.pretty)
@@ -97,7 +96,7 @@ func (cmd *groupCmd) run(args []string) {
 			<-ctx.done
 
 			if cmd.verbose {
-				fmt.Fprintf(os.Stderr, "%v/%v\n", i+1, len(groups))
+				log.Printf("%v/%v\n", i+1, len(groups))
 			}
 		}
 		return
@@ -108,7 +107,7 @@ func (cmd *groupCmd) run(args []string) {
 		parts := cmd.partitions
 		if len(parts) == 0 {
 			parts = cmd.fetchPartitions(topic)
-			fmt.Fprintf(os.Stderr, "found partitions=%v for topic=%v\n", parts, topic)
+			log.Printf("found partitions=%v for topic=%v\n", parts, topic)
 		}
 		topicPartitions[topic] = parts
 	}
@@ -165,7 +164,7 @@ func (cmd *groupCmd) resolveOffset(top string, part int32, off int64) int64 {
 	}
 
 	if cmd.verbose {
-		fmt.Fprintf(os.Stderr, "resolved offset %v for topic=%s partition=%d to %v\n", off, top, part, resolvedOff)
+		log.Printf("resolved offset %v for topic=%s partition=%d to %v\n", off, top, part, resolvedOff)
 	}
 
 	return resolvedOff
@@ -175,7 +174,7 @@ func (cmd *groupCmd) fetchGroupOffset(wg *sync.WaitGroup, grp, top string, part 
 	defer wg.Done()
 
 	if cmd.verbose {
-		fmt.Fprintf(os.Stderr, "fetching offset information for group=%v topic=%v partition=%v\n", grp, top, part)
+		log.Printf("fetching offset information for group=%v topic=%v partition=%v\n", grp, top, part)
 	}
 
 	offsetManager, err := sarama.NewOffsetManagerFromClient(grp, cmd.client)
@@ -315,55 +314,41 @@ func (cmd *groupCmd) connect(broker *sarama.Broker) error {
 }
 
 func (cmd *groupCmd) saramaConfig() *sarama.Config {
-	var (
-		err error
-		usr *user.User
-		cfg = sarama.NewConfig()
-	)
-
+	cfg := sarama.NewConfig()
 	cfg.Version = cmd.version
-	if usr, err = user.Current(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to read current user err=%v", err)
-	}
-	cfg.ClientID = "kt-group-" + sanitizeUsername(usr.Username)
+	cfg.ClientID = "kt-group-" + currentUserName()
 
 	if err := setupAuth(cmd.auth, cfg); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to setupAuth err=%v", err)
+		log.Printf("Failed to setupAuth err=%v", err)
 	}
 
 	return cfg
 }
 
 func (cmd *groupCmd) failStartup(msg string) {
-	fmt.Fprintln(os.Stderr, msg)
+	log.Print(msg)
 	failf("use \"kt group -help\" for more information")
 }
 
 func (cmd *groupCmd) parseArgs(as []string) {
-	var (
-		err  error
-		args = cmd.parseFlags(as)
-	)
+	var err error
 
-	envTopic := os.Getenv(envTopic)
-	if args.topic == "" {
-		args.topic = envTopic
-	}
+	a := cmd.parseFlags(as)
 
-	cmd.topic = args.topic
-	cmd.group = args.group
-	cmd.verbose = args.verbose
-	cmd.pretty = args.pretty
-	cmd.offsets = args.offsets
-	cmd.version = kafkaVersion(args.version)
+	cmd.topic = getKtTopic(a.topic)
+	cmd.group = a.group
+	cmd.verbose = a.verbose
+	cmd.pretty = a.pretty
+	cmd.offsets = a.offsets
+	cmd.version = kafkaVersion(a.version)
 
-	readAuthFile(args.auth, os.Getenv(envAuth), &cmd.auth)
+	readAuthFile(a.auth, os.Getenv(envAuth), &cmd.auth)
 
-	switch args.partitions {
+	switch a.partitions {
 	case "", "all":
 		cmd.partitions = []int32{}
 	default:
-		pss := strings.Split(args.partitions, ",")
+		pss := strings.Split(a.partitions, ",")
 		for _, ps := range pss {
 			p, err := strconv.ParseInt(ps, 10, 32)
 			if err != nil {
@@ -374,22 +359,22 @@ func (cmd *groupCmd) parseArgs(as []string) {
 	}
 
 	if cmd.partitions == nil {
-		failf(`failed to interpret partitions flag %#v. Should be a comma separated list of partitions or "all".`, args.partitions)
+		failf(`failed to interpret partitions flag %#v. Should be a comma separated list of partitions or "all".`, a.partitions)
 	}
 
-	if cmd.filterGroups, err = regexp.Compile(args.filterGroups); err != nil {
+	if cmd.filterGroups, err = regexp.Compile(a.filterGroups); err != nil {
 		failf("groups filter regexp invalid err=%v", err)
 	}
 
-	if cmd.filterTopics, err = regexp.Compile(args.filterTopics); err != nil {
+	if cmd.filterTopics, err = regexp.Compile(a.filterTopics); err != nil {
 		failf("topics filter regexp invalid err=%v", err)
 	}
 
-	if args.reset != "" && (args.topic == "" || args.group == "") {
+	if a.reset != "" && (a.topic == "" || a.group == "") {
 		failf("group and topic are required to reset offsets.")
 	}
 
-	switch args.reset {
+	switch a.reset {
 	case "newest":
 		cmd.reset = sarama.OffsetNewest
 	case "oldest":
@@ -398,24 +383,24 @@ func (cmd *groupCmd) parseArgs(as []string) {
 		// optional flag
 		cmd.reset = resetNotSpecified
 	default:
-		cmd.reset, err = strconv.ParseInt(args.reset, 10, 64)
+		cmd.reset, err = strconv.ParseInt(a.reset, 10, 64)
 		if err != nil {
 			if cmd.verbose {
-				fmt.Fprintf(os.Stderr, "failed to parse set %#v err=%v", args.reset, err)
+				log.Printf("failed to parse set %#v err=%v", a.reset, err)
 			}
-			cmd.failStartup(fmt.Sprintf(`set value %#v not valid. either newest, oldest or specific offset expected.`, args.reset))
+			cmd.failStartup(fmt.Sprintf(`set value %#v not valid. either newest, oldest or specific offset expected.`, a.reset))
 		}
 	}
 
 	envBrokers := os.Getenv(envBrokers)
-	if args.brokers == "" {
+	if a.brokers == "" {
 		if envBrokers != "" {
-			args.brokers = envBrokers
+			a.brokers = envBrokers
 		} else {
-			args.brokers = "localhost:9092"
+			a.brokers = "localhost:9092"
 		}
 	}
-	cmd.brokers = strings.Split(args.brokers, ",")
+	cmd.brokers = strings.Split(a.brokers, ",")
 	for i, b := range cmd.brokers {
 		if !strings.Contains(b, ":") {
 			cmd.brokers[i] = b + ":9092"
@@ -439,35 +424,35 @@ type groupArgs struct {
 }
 
 func (cmd *groupCmd) parseFlags(as []string) groupArgs {
-	var args groupArgs
-	flags := flag.NewFlagSet("group", flag.ContinueOnError)
-	flags.StringVar(&args.topic, "topic", "", "Topic to consume (required).")
-	flags.StringVar(&args.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
-	flags.StringVar(&args.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
-	flags.StringVar(&args.group, "group", "", "Consumer group name.")
-	flags.StringVar(&args.filterGroups, "filter-groups", "", "Regex to filter groups.")
-	flags.StringVar(&args.filterTopics, "filter-topics", "", "Regex to filter topics.")
-	flags.StringVar(&args.reset, "reset", "", "Target offset to reset for consumer group (newest, oldest, or specific offset)")
-	flags.BoolVar(&args.verbose, "verbose", false, "More verbose logging to stderr.")
-	flags.BoolVar(&args.pretty, "pretty", false, "Control output pretty printing.")
-	flags.StringVar(&args.version, "version", "", "Kafka protocol version")
-	flags.StringVar(&args.partitions, "partitions", allPartitionsHuman, "comma separated list of partitions to limit offsets to, or all")
-	flags.BoolVar(&args.offsets, "offsets", true, "Controls if offsets should be fetched (defauls to true)")
+	var a groupArgs
+	f := flag.NewFlagSet("group", flag.ContinueOnError)
+	f.StringVar(&a.topic, "topic", "", "Topic to consume (required).")
+	f.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
+	f.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
+	f.StringVar(&a.group, "group", "", "Consumer group name.")
+	f.StringVar(&a.filterGroups, "filter-groups", "", "Regex to filter groups.")
+	f.StringVar(&a.filterTopics, "filter-topics", "", "Regex to filter topics.")
+	f.StringVar(&a.reset, "reset", "", "Target offset to reset for consumer group (newest, oldest, or specific offset)")
+	f.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
+	f.BoolVar(&a.pretty, "pretty", false, "Control output pretty printing.")
+	f.StringVar(&a.version, "version", "", "Kafka protocol version")
+	f.StringVar(&a.partitions, "partitions", allPartitionsHuman, "comma separated list of partitions to limit offsets to, or all")
+	f.BoolVar(&a.offsets, "offsets", true, "Controls if offsets should be fetched (defauls to true)")
 
-	flags.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage of group:")
-		flags.PrintDefaults()
-		fmt.Fprintln(os.Stderr, groupDocString)
+	f.Usage = func() {
+		fmt.Fprint(os.Stderr, "Usage of group:")
+		f.PrintDefaults()
+		fmt.Fprint(os.Stderr, groupDocString)
 	}
 
-	err := flags.Parse(as)
+	err := f.Parse(as)
 	if err != nil && strings.Contains(err.Error(), "flag: help requested") {
 		os.Exit(0)
 	} else if err != nil {
 		os.Exit(2)
 	}
 
-	return args
+	return a
 }
 
 var groupDocString = fmt.Sprintf(`

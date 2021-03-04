@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/user"
 	"strings"
 	"time"
 
@@ -21,10 +20,10 @@ type adminCmd struct {
 	timeout *time.Duration
 	auth    authConfig
 
-	createTopic  string
+	topicCreate  string
 	topicDetail  *sarama.TopicDetail
 	validateOnly bool
-	deleteTopic  string
+	topicDelete  string
 
 	admin sarama.ClusterAdmin
 }
@@ -36,10 +35,10 @@ type adminArgs struct {
 	timeout string
 	auth    string
 
-	createTopic     string
-	topicDetailPath string
-	validateOnly    bool
-	deleteTopic     string
+	topicCreate  string
+	topicConfig  string
+	validateOnly bool
+	topicDelete  string
 }
 
 func (cmd *adminCmd) parseArgs(as []string) {
@@ -47,7 +46,6 @@ func (cmd *adminCmd) parseArgs(as []string) {
 
 	cmd.verbose = args.verbose
 	cmd.version = kafkaVersion(args.version)
-
 	cmd.timeout = parseTimeout(os.Getenv(envAdminTimeout))
 	if args.timeout != "" {
 		cmd.timeout = parseTimeout(args.timeout)
@@ -56,23 +54,60 @@ func (cmd *adminCmd) parseArgs(as []string) {
 	readAuthFile(args.auth, os.Getenv(envAuth), &cmd.auth)
 
 	cmd.brokers = parseBrokers(args.brokers)
-
 	cmd.validateOnly = args.validateOnly
-	cmd.createTopic = args.createTopic
-	cmd.deleteTopic = args.deleteTopic
+	cmd.topicCreate = args.topicCreate
+	cmd.topicDelete = args.topicDelete
 
-	if cmd.createTopic != "" {
-		buf, err := ioutil.ReadFile(args.topicDetailPath)
-		if err != nil {
-			failf("failed to read topic detail err=%v", err)
+	if cmd.topicCreate != "" {
+		var (
+			err error
+			buf []byte
+		)
+		if strings.HasPrefix(args.topicConfig, "@") {
+			buf, err = ioutil.ReadFile(args.topicConfig[1:])
+			if err != nil {
+				failf("failed to read topic detail err=%v", err)
+			}
+		} else {
+			buf = []byte(args.topicConfig)
 		}
 
-		var detail sarama.TopicDetail
+		var detail TopicDetail
 		if err = json.Unmarshal(buf, &detail); err != nil {
 			failf("failed to unmarshal topic detail err=%v", err)
 		}
-		cmd.topicDetail = &detail
+		cmd.topicDetail = detail.ToSaramaTopicDetail()
 	}
+}
+
+// TopicDetail is structure convenient of topic.config  in topic.create.
+type TopicDetail struct {
+	NumPartitions  *int32 `json:"NumPartitions,omitempty"`
+	NumPartitions2 *int32 `json:"numPartitions,omitempty"`
+	NumPartitions3 *int32 `json:"mp,omitempty"`
+
+	ReplicationFactor  *int16 `json:"ReplicationFactor,omitempty"`
+	ReplicationFactor2 *int16 `json:"replicationFactor,omitempty"`
+	ReplicationFactor3 *int16 `json:"rf,omitempty"`
+
+	ReplicaAssignment  *map[int32][]int32 `json:"ReplicaAssignment,omitempty"`
+	ReplicaAssignment2 *map[int32][]int32 `json:"replicaAssignment,omitempty"`
+	ReplicaAssignment3 *map[int32][]int32 `json:"ra,omitempty"`
+
+	ConfigEntries  *map[string]*string `json:"ConfigEntries,omitempty"`
+	ConfigEntries2 *map[string]*string `json:"configEntries,omitempty"`
+	ConfigEntries3 *map[string]*string `json:"ce,omitempty"`
+}
+
+// ToSaramaTopicDetail convert to *sarama.TopicDetail.
+func (r *TopicDetail) ToSaramaTopicDetail() *sarama.TopicDetail {
+	d := &sarama.TopicDetail{}
+	d.NumPartitions = FirstNotNilInt32(r.NumPartitions, r.NumPartitions2, r.NumPartitions3)
+	d.ReplicationFactor = FirstNotNilInt16(r.ReplicationFactor, r.ReplicationFactor2, r.ReplicationFactor3)
+	d.ReplicaAssignment = FirstNotNilMapInt32(r.ReplicaAssignment, r.ReplicaAssignment2, r.ReplicaAssignment3)
+	d.ConfigEntries = FirstNotNilMapString(r.ConfigEntries, r.ConfigEntries2, r.ConfigEntries3)
+
+	return d
 }
 
 func (cmd *adminCmd) run(args []string) {
@@ -88,41 +123,35 @@ func (cmd *adminCmd) run(args []string) {
 		failf("failed to create cluster admin err=%v", err)
 	}
 
-	if cmd.createTopic != "" {
+	if cmd.topicCreate != "" {
 		cmd.runCreateTopic()
-	} else if cmd.deleteTopic != "" {
+	}
+
+	if cmd.topicDelete != "" {
 		cmd.runDeleteTopic()
-	} else {
-		failf("need to supply at least one sub-command of: createtopic, deletetopic")
 	}
 }
 
 func (cmd *adminCmd) runCreateTopic() {
-	err := cmd.admin.CreateTopic(cmd.createTopic, cmd.topicDetail, cmd.validateOnly)
+	err := cmd.admin.CreateTopic(cmd.topicCreate, cmd.topicDetail, cmd.validateOnly)
 	if err != nil {
 		failf("failed to create topic err=%v", err)
 	}
 }
 
 func (cmd *adminCmd) runDeleteTopic() {
-	err := cmd.admin.DeleteTopic(cmd.deleteTopic)
+	err := cmd.admin.DeleteTopic(cmd.topicDelete)
 	if err != nil {
 		failf("failed to delete topic err=%v", err)
 	}
 }
 
 func (cmd *adminCmd) saramaConfig() *sarama.Config {
-	var (
-		err error
-		usr *user.User
-		cfg = sarama.NewConfig()
-	)
+	var err error
 
+	cfg := sarama.NewConfig()
 	cfg.Version = cmd.version
-	if usr, err = user.Current(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to read current user err=%v", err)
-	}
-	cfg.ClientID = "kt-admin-" + sanitizeUsername(usr.Username)
+	cfg.ClientID = "kt-admin-" + currentUserName()
 
 	if cmd.timeout != nil {
 		cfg.Admin.Timeout = *cmd.timeout
@@ -136,46 +165,42 @@ func (cmd *adminCmd) saramaConfig() *sarama.Config {
 }
 
 func (cmd *adminCmd) parseFlags(as []string) adminArgs {
-	var args adminArgs
-	flags := flag.NewFlagSet("consume", flag.ContinueOnError)
-	flags.StringVar(&args.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
-	flags.BoolVar(&args.verbose, "verbose", false, "More verbose logging to stderr.")
-	flags.StringVar(&args.version, "version", "", "Kafka protocol version")
-	flags.StringVar(&args.timeout, "timeout", "", "Timeout for request to Kafka (default: 3s)")
-	flags.StringVar(&args.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
+	var a adminArgs
+	f := flag.NewFlagSet("consume", flag.ContinueOnError)
+	f.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
+	f.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
+	f.StringVar(&a.version, "version", "", "Kafka protocol version")
+	f.StringVar(&a.timeout, "timeout", "", "Timeout for request to Kafka (default: 3s)")
+	f.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
 
-	flags.StringVar(&args.createTopic, "createtopic", "", "Name of the topic that should be created.")
-	flags.StringVar(&args.topicDetailPath, "topicdetail", "", "Path to JSON encoded topic detail. cf sarama.TopicDetail")
-	flags.BoolVar(&args.validateOnly, "validateonly", false, "Flag to indicate whether operation should only validate input (supported for createtopic).")
+	f.StringVar(&a.topicCreate, "topic.create", "", "Name of the topic that should be created.")
+	f.StringVar(&a.topicConfig, "topic.config", "", "Direct JSON string or @file.json of topic detail. cf sarama.TopicDetail")
+	f.BoolVar(&a.validateOnly, "validate.only", false, "Flag to indicate whether operation should only validate input (supported for topic.create).")
+	f.StringVar(&a.topicDelete, "topic.delete", "", "Name of the topic that should be deleted.")
 
-	flags.StringVar(&args.deleteTopic, "deletetopic", "", "Name of the topic that should be deleted.")
-
-	flags.Usage = func() {
+	f.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage of admin:")
-		flags.PrintDefaults()
+		f.PrintDefaults()
 		fmt.Fprintln(os.Stderr, adminDocString)
 	}
 
-	err := flags.Parse(as)
+	err := f.Parse(as)
 	if err != nil && strings.Contains(err.Error(), "flag: help requested") {
 		os.Exit(0)
 	} else if err != nil {
 		os.Exit(2)
 	}
 
-	return args
+	return a
 }
 
 var adminDocString = fmt.Sprintf(`
 The value for -brokers can also be set via environment variables %s.
 The value supplied on the command line wins over the environment variable value.
 
-If both -createtopic and deletetopic are supplied, -createtopic wins.
-
 The topic details should be passed via a JSON file that represents a sarama.TopicDetail struct.
 cf https://godoc.org/github.com/Shopify/sarama#TopicDetail
 
 A simple way to pass a JSON file is to use a tool like https://github.com/fgeller/jsonify and shell's process substition:
 
-kt admin -createtopic morenews -topicdetail <(jsonify =NumPartitions 1 =ReplicationFactor 1)`,
-	envBrokers)
+kt admin -topic.create morenews -topic.config $(jsonify --NumPartitions 1 --ReplicationFactor 1)`, envBrokers)

@@ -4,13 +4,17 @@ import (
 	"bufio"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"os"
 	"os/signal"
+	"os/user"
 	"regexp"
 	"strings"
 	"syscall"
@@ -28,17 +32,49 @@ const (
 	envTopic        = "KT_TOPIC"
 )
 
+func getKtTopic(topic string) string {
+	if topic != "" {
+		return topic
+	}
+
+	if v := os.Getenv(envTopic); v != "" {
+		return v
+	}
+
+	failStartup("Topic name is required.")
+	return ""
+}
+
 var invalidClientIDCharactersRegExp = regexp.MustCompile(`[^a-zA-Z0-9_-]`)
 
 type command interface {
 	run(args []string)
 }
 
+func parseBrokers(argBrokers string) []string {
+	if argBrokers == "" {
+		if v := os.Getenv(envBrokers); v != "" {
+			argBrokers = v
+		} else {
+			argBrokers = "localhost:9092"
+		}
+	}
+
+	brokers := strings.Split(argBrokers, ",")
+	for i, b := range brokers {
+		if !strings.Contains(b, ":") {
+			brokers[i] = b + ":9092"
+		}
+	}
+
+	return brokers
+}
+
 func listenForInterrupt(q chan struct{}) {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 	sig := <-signals
-	fmt.Fprintf(os.Stderr, "received signal %s\n", sig)
+	log.Printf("received signal %s\n", sig)
 	close(q)
 }
 
@@ -70,7 +106,7 @@ func parseTimeout(s string) *time.Duration {
 
 func logClose(name string, c io.Closer) {
 	if err := c.Close(); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to close %#v err=%v", name, err)
+		log.Printf("failed to close %s err=%v", name, err)
 	}
 }
 
@@ -80,11 +116,7 @@ type printContext struct {
 }
 
 func print(in <-chan printContext, pretty bool) {
-	var (
-		buf     []byte
-		err     error
-		marshal = json.Marshal
-	)
+	marshal := json.Marshal
 
 	if pretty && terminal.IsTerminal(syscall.Stdout) {
 		marshal = func(i interface{}) ([]byte, error) { return json.MarshalIndent(i, "", "  ") }
@@ -92,7 +124,8 @@ func print(in <-chan printContext, pretty bool) {
 
 	for {
 		ctx := <-in
-		if buf, err = marshal(ctx.output); err != nil {
+		buf, err := marshal(ctx.output)
+		if err != nil {
 			failf("failed to marshal output %#v, err=%v", ctx.output, err)
 		}
 
@@ -113,7 +146,7 @@ func exitf(code int, msg string, args ...interface{}) {
 	if code == 0 {
 		fmt.Fprintf(os.Stdout, msg+"\n", args...)
 	} else {
-		fmt.Fprintf(os.Stderr, msg+"\n", args...)
+		log.Printf(msg+"\n", args...)
 	}
 	os.Exit(code)
 }
@@ -127,7 +160,7 @@ func readStdinLines(max int, out chan string) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintf(os.Stderr, "scanning input err=%v\n", err)
+		log.Printf("scanning input err=%v\n", err)
 	}
 	close(out)
 }
@@ -174,6 +207,16 @@ func hashCodePartition(key string, partitions int32) int32 {
 	return kafkaAbs(hashCode(key)) % partitions
 }
 
+func currentUserName() string {
+	usr, err := user.Current()
+	if err != nil {
+		log.Printf("Failed to read current user err %v", err)
+		return "unknown"
+	}
+
+	return sanitizeUsername(usr.Username)
+}
+
 func sanitizeUsername(u string) string {
 	// Windows user may have format "DOMAIN|MACHINE\username", remove domain/machine if present
 	s := strings.Split(u, "\\")
@@ -190,105 +233,77 @@ func randomString(length int) string {
 	return fmt.Sprintf("%x", buf)[:length]
 }
 
-// SetupCerts takes the paths to a tls certificate, CA, and certificate key in
-// a PEM format and returns a constructed tls.Config object.
-func SetupCerts(certPath, caPath, keyPath string) (*tls.Config, error) {
-	if certPath == "" && caPath == "" && keyPath == "" {
-		return nil, nil
-	}
-
-	if certPath == "" || caPath == "" || keyPath == "" {
-		err := fmt.Errorf("certificate, CA and key path are required - got cert=%s ca=%s key=%s", certPath, caPath, keyPath)
-		return nil, err
-	}
-
-	caString, err := ioutil.ReadFile(caPath)
-	if err != nil {
-		return nil, err
-	}
-
-	caPool := x509.NewCertPool()
-	ok := caPool.AppendCertsFromPEM(caString)
-	if !ok {
-		failf("unable to add ca at %s to certificate pool", caPath)
-	}
-
-	clientCert, err := tls.LoadX509KeyPair(certPath, keyPath)
-	if err != nil {
-		return nil, err
-	}
-
-	return &tls.Config{
-		RootCAs:      caPool,
-		Certificates: []tls.Certificate{clientCert},
-	}, nil
-}
-
 type authConfig struct {
-	Mode              string `json:"mode"`
-	CACert            string `json:"ca-cert"`
-	ClientCert        string `json:"client-cert"`
-	ClientCertKey     string `json:"client-cert-key"`
-	SASLPlainUser     string `json:"sasl_plain_user"`
-	SASLPlainPassword string `json:"sasl_plain_password"`
+	Mode          string `json:"mode"`
+	CACert        string `json:"ca-cert"`
+	ClientCert    string `json:"client-cert"`
+	ClientCertKey string `json:"client-cert-key"`
+	SASLUsr       string `json:"sasl-usr"`
+	SASLPwd       string `json:"sasl-pwd"`
 }
 
-func setupAuth(auth authConfig, saramaCfg *sarama.Config) error {
-	if auth.Mode == "" {
-		return nil
-	}
-
+func setupAuth(auth authConfig, sc *sarama.Config) error {
 	switch auth.Mode {
+	case "":
+		return nil
 	case "TLS":
-		return setupAuthTLS(auth, saramaCfg)
+		return auth.setupAuthTLS(sc)
 	case "TLS-1way":
-		return setupAuthTLS1Way(auth, saramaCfg)
+		return auth.setupAuthTLS1Way(sc)
 	case "SASL":
-		return setupSASL(auth, saramaCfg)
+		return auth.setupSASL(sc)
 	default:
 		return fmt.Errorf("unsupport auth mode: %#v", auth.Mode)
 	}
 }
 
-func setupSASL(auth authConfig, saramaCfg *sarama.Config) error {
-	saramaCfg.Net.SASL.Enable = true
-	saramaCfg.Net.SASL.User = auth.SASLPlainUser
-	saramaCfg.Net.SASL.Password = auth.SASLPlainPassword
+func (r authConfig) setupSASL(sc *sarama.Config) error {
+	sc.Net.SASL.Enable = true
+	sc.Net.SASL.User = r.SASLUsr
+	sc.Net.SASL.Password = r.SASLPwd
 	return nil
 }
 
-func setupAuthTLS1Way(auth authConfig, saramaCfg *sarama.Config) error {
-	saramaCfg.Net.TLS.Enable = true
-	saramaCfg.Net.TLS.Config = &tls.Config{}
+func (r authConfig) setupAuthTLS1Way(sc *sarama.Config) error {
+	sc.Net.TLS.Enable = true
+	sc.Net.TLS.Config = &tls.Config{}
 	return nil
 }
 
-func setupAuthTLS(auth authConfig, saramaCfg *sarama.Config) error {
-	if auth.CACert == "" || auth.ClientCert == "" || auth.ClientCertKey == "" {
-		return fmt.Errorf("client-cert, client-cert-key and ca-cert are required - got auth=%#v", auth)
-	}
-
-	caString, err := ioutil.ReadFile(auth.CACert)
-	if err != nil {
-		return fmt.Errorf("failed to read ca-cert err=%v", err)
-	}
-
-	caPool := x509.NewCertPool()
-	ok := caPool.AppendCertsFromPEM(caString)
-	if !ok {
-		failf("unable to add ca-cert at %s to certificate pool", auth.CACert)
-	}
-
-	clientCert, err := tls.LoadX509KeyPair(auth.ClientCert, auth.ClientCertKey)
+func (r authConfig) setupAuthTLS(sc *sarama.Config) error {
+	tlsCfg, err := createTLSConfig(r.CACert, r.ClientCert, r.ClientCertKey)
 	if err != nil {
 		return err
 	}
 
-	tlsCfg := &tls.Config{RootCAs: caPool, Certificates: []tls.Certificate{clientCert}}
-	saramaCfg.Net.TLS.Enable = true
-	saramaCfg.Net.TLS.Config = tlsCfg
+	sc.Net.TLS.Enable = true
+	sc.Net.TLS.Config = tlsCfg
 
 	return nil
+}
+
+func createTLSConfig(caCert, clientCert, certKey string) (*tls.Config, error) {
+	if caCert == "" || clientCert == "" || certKey == "" {
+		return nil, fmt.Errorf("a-cert, client-cert and client-key are required")
+	}
+
+	caString, err := ioutil.ReadFile(caCert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read ca-cert err=%v", err)
+	}
+
+	caPool := x509.NewCertPool()
+	if ok := caPool.AppendCertsFromPEM(caString); !ok {
+		return nil, fmt.Errorf("unable to add ca-cert at %s to certificate pool", caCert)
+	}
+
+	cert, err := tls.LoadX509KeyPair(clientCert, certKey)
+	if err != nil {
+		return nil, err
+	}
+
+	tlsCfg := &tls.Config{RootCAs: caPool, Certificates: []tls.Certificate{cert}}
+	return tlsCfg, nil
 }
 
 func readAuthFile(argFN string, envFN string, target *authConfig) {
@@ -309,4 +324,99 @@ func readAuthFile(argFN string, envFN string, target *authConfig) {
 	if err := json.Unmarshal(byts, target); err != nil {
 		failf("failed to unmarshal auth file err=%v", err)
 	}
+}
+
+type bytesEncoder func(src []byte) string
+
+func parseEncodeBytesFn(encoder string) bytesEncoder {
+	switch encoder {
+	case "hex":
+		return hex.EncodeToString
+	case "base64":
+		return base64.StdEncoding.EncodeToString
+	case "string":
+		return func(data []byte) string { return string(data) }
+	}
+
+	failStartup(fmt.Sprintf(`bad encoder argument %s, only allow string/hex/base64.`, encoder))
+	return nil
+}
+
+func encodeBytes(data []byte, encoder bytesEncoder) string {
+	if data == nil {
+		return ""
+	}
+
+	return encoder(data)
+}
+
+type stringDecoder func(string) ([]byte, error)
+
+func parseStringDecoder(decoder string) stringDecoder {
+	switch decoder {
+	case "hex":
+		return hex.DecodeString
+	case "base64":
+		return base64.StdEncoding.DecodeString
+	case "string":
+		return func(s string) ([]byte, error) { return []byte(s), nil }
+	}
+
+	failStartup(fmt.Sprintf(`bad decoder %s, only allow string/hex/base64.`, decoder))
+	return nil
+}
+
+// FirstNotNil returns the first non-nil string.
+func FirstNotNil(a ...*string) string {
+	for _, i := range a {
+		if i != nil {
+			return *i
+		}
+	}
+
+	return ""
+}
+
+// FirstNotNilInt16 returns the first non-nil string.
+func FirstNotNilInt16(a ...*int16) int16 {
+	for _, i := range a {
+		if i != nil {
+			return *i
+		}
+	}
+
+	return 0
+}
+
+// FirstNotNilInt32 returns the first non-nil string.
+func FirstNotNilInt32(a ...*int32) int32 {
+	for _, i := range a {
+		if i != nil {
+			return *i
+		}
+	}
+
+	return 0
+}
+
+// FirstNotNilMapInt32 returns the first non-nil string.
+func FirstNotNilMapInt32(a ...*map[int32][]int32) map[int32][]int32 {
+	for _, i := range a {
+		if i != nil {
+			return *i
+		}
+	}
+
+	return nil
+}
+
+// FirstNotNilMapString returns the first non-nil string.
+func FirstNotNilMapString(a ...*map[string]*string) map[string]*string {
+	for _, i := range a {
+		if i != nil {
+			return *i
+		}
+	}
+
+	return nil
 }

@@ -1,14 +1,11 @@
 package main
 
 import (
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"os/user"
 	"strings"
 	"time"
 
@@ -62,9 +59,9 @@ func (c *produceCmd) read(as []string) produceArgs {
 	f.IntVar(&a.bufSize, "buf.size", 16777216, "Buffer size for scanning stdin, defaults to 16777216=16*1024*1024.")
 
 	f.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage of produce:")
+		fmt.Fprint(os.Stderr, "Usage of produce:")
 		f.PrintDefaults()
-		fmt.Fprintln(os.Stderr, produceDocString)
+		fmt.Fprint(os.Stderr, produceDocString)
 	}
 
 	err := f.Parse(as)
@@ -77,35 +74,15 @@ func (c *produceCmd) read(as []string) produceArgs {
 	return a
 }
 
-func (c *produceCmd) failStartup(msg string) {
-	fmt.Fprintln(os.Stderr, msg)
-	failf("use \"kt produce -help\" for more information")
-}
-
 func (c *produceCmd) parseArgs(as []string) {
 	a := c.read(as)
-	envTopic := os.Getenv(envTopic)
-	if a.topic == "" {
-		if envTopic == "" {
-			c.failStartup("Topic name is required.")
-		} else {
-			a.topic = envTopic
-		}
-	}
-	c.topic = a.topic
+	c.topic = getKtTopic(a.topic)
 
 	readAuthFile(a.auth, os.Getenv(envAuth), &c.auth)
 
 	c.brokers = parseBrokers(a.brokers)
 
-	if !anyOf(a.decVal, "string", "hex", "base64") {
-		c.failStartup(fmt.Sprintf(`bad dec.val argument %#v, only allow string/hex/base64.`, a.decVal))
-	}
 	c.valDecoder = parseStringDecoder(a.decVal)
-
-	if !anyOf(a.decKey, "string", "hex", "base64") {
-		c.failStartup(fmt.Sprintf(`bad dec.key argument %#v, only allow string/hex/base64.`, a.decVal))
-	}
 	c.keyDecoder = parseStringDecoder(a.decKey)
 
 	c.batch = a.batch
@@ -118,16 +95,6 @@ func (c *produceCmd) parseArgs(as []string) {
 	c.version = kafkaVersion(a.version)
 	c.compress = kafkaCompression(a.compress)
 	c.bufSize = a.bufSize
-}
-
-func anyOf(s string, allows ...string) bool {
-	for _, allow := range allows {
-		if s == allow {
-			return true
-		}
-	}
-
-	return false
 }
 
 func kafkaCompression(codecName string) sarama.CompressionCodec {
@@ -149,20 +116,16 @@ func kafkaCompression(codecName string) sarama.CompressionCodec {
 func (c *produceCmd) findLeaders() {
 	var (
 		err error
-		usr *user.User
 		res *sarama.MetadataResponse
-		req = sarama.MetadataRequest{Topics: []string{c.topic}}
-		cfg = sarama.NewConfig()
 	)
 
+	req := sarama.MetadataRequest{Topics: []string{c.topic}}
+	cfg := sarama.NewConfig()
 	cfg.Producer.RequiredAcks = sarama.WaitForAll
 	cfg.Version = c.version
-	if usr, err = user.Current(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to read current user err=%v", err)
-	}
-	cfg.ClientID = "kt-produce-" + sanitizeUsername(usr.Username)
+	cfg.ClientID = "kt-produce-" + currentUserName()
 	if c.verbose {
-		fmt.Fprintf(os.Stderr, "sarama client configuration %#v\n", cfg)
+		log.Printf("sarama client configuration %#v\n", cfg)
 	}
 
 	if err = setupAuth(c.auth, cfg); err != nil {
@@ -173,16 +136,16 @@ loop:
 	for _, addr := range c.brokers {
 		broker := sarama.NewBroker(addr)
 		if err = broker.Open(cfg); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to open broker connection to %v. err=%s\n", addr, err)
+			log.Printf("Failed to open broker connection to %v. err=%s\n", addr, err)
 			continue loop
 		}
 		if connected, err := broker.Connected(); !connected || err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to open broker connection to %v. err=%s\n", addr, err)
+			log.Printf("Failed to open broker connection to %v. err=%s\n", addr, err)
 			continue loop
 		}
 
 		if res, err = broker.GetMetadata(&req); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to get metadata from %#v. err=%v\n", addr, err)
+			log.Printf("Failed to get metadata from %#v. err=%v\n", addr, err)
 			continue loop
 		}
 
@@ -194,7 +157,7 @@ loop:
 		for _, tm := range res.Topics {
 			if tm.Name == c.topic {
 				if tm.Err != sarama.ErrNoError {
-					fmt.Fprintf(os.Stderr, "Failed to get metadata from %#v. err=%v\n", addr, tm.Err)
+					log.Printf("Failed to get metadata from %#v. err=%v\n", addr, tm.Err)
 					continue loop
 				}
 
@@ -274,7 +237,7 @@ func (c *produceCmd) close() {
 		)
 
 		if connected, err = b.Connected(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to check if broker is connected. err=%s\n", err)
+			log.Printf("Failed to check if broker is connected. err=%s\n", err)
 			continue
 		}
 
@@ -283,7 +246,7 @@ func (c *produceCmd) close() {
 		}
 
 		if err = b.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to close broker %v connection. err=%s\n", b, err)
+			log.Printf("Failed to close broker %v connection. err=%s\n", b, err)
 		}
 	}
 }
@@ -300,7 +263,7 @@ func (c *produceCmd) deserializeLines(in chan string, out chan message, partitio
 		default:
 			if err := json.Unmarshal([]byte(l), &msg); err != nil {
 				if c.verbose {
-					fmt.Fprintf(os.Stderr, "Failed to unmarshal input [%v], falling back to defaults. err=%v\n", l, err)
+					log.Printf("Failed to unmarshal input [%v], falling back to defaults. err=%v\n", l, err)
 				}
 				v := &l
 				if len(l) == 0 {
@@ -310,24 +273,30 @@ func (c *produceCmd) deserializeLines(in chan string, out chan message, partitio
 			}
 		}
 
-		if msg.Partition == nil && msg.P != nil {
-			msg.Partition = msg.P
-		}
-
-		if msg.Partition == nil {
-			part := int32(0)
-			switch {
-			case c.partitioner == "rand":
-				part = randPartition(partitionCount)
-			case msg.Key != nil && c.partitioner == "hash":
-				part = hashCodePartition(*msg.Key, partitionCount)
-			}
-
-			msg.Partition = &part
-		}
+		c.setPartition(msg, partitionCount)
 
 		out <- msg
 	}
+}
+
+func (c *produceCmd) setPartition(msg message, partitionCount int32) {
+	if msg.Partition == nil && msg.P != nil {
+		msg.Partition = msg.P
+	}
+
+	if msg.Partition != nil {
+		return
+	}
+
+	part := int32(0)
+	switch {
+	case c.partitioner == "rand":
+		part = randPartition(partitionCount)
+	case msg.Key != nil && c.partitioner == "hash":
+		part = hashCodePartition(*msg.Key, partitionCount)
+	}
+
+	msg.Partition = &part
 }
 
 func (c *produceCmd) batchRecords(in chan message, out chan []message) {
@@ -362,30 +331,6 @@ func (c *produceCmd) batchRecords(in chan message, out chan []message) {
 type partitionProduceResult struct {
 	start int64
 	count int64
-}
-
-type stringDecoder func(string) ([]byte, error)
-
-func parseStringDecoder(decoder string) stringDecoder {
-	switch decoder {
-	case "hex":
-		return hex.DecodeString
-	case "base64":
-		return base64.StdEncoding.DecodeString
-	default: // string
-		return func(s string) ([]byte, error) { return []byte(s), nil }
-	}
-}
-
-// FirstNotNil returns the first non-nil string.
-func FirstNotNil(a ...*string) string {
-	for _, i := range a {
-		if i != nil {
-			return *i
-		}
-	}
-
-	return ""
 }
 
 func (c *produceCmd) makeSaramaMessage(msg message) (*sarama.Message, error) {
@@ -461,7 +406,7 @@ func readPartitionOffsetResults(resp *sarama.ProduceResponse) (map[int32]partiti
 	for _, blocks := range resp.Blocks {
 		for partition, block := range blocks {
 			if block.Err != sarama.ErrNoError {
-				fmt.Fprintf(os.Stderr, "Failed to send message. err=%s\n", block.Err.Error())
+				log.Printf("Failed to send message. err=%v\n", block.Err)
 				return offsets, block.Err
 			}
 
@@ -478,7 +423,7 @@ func readPartitionOffsetResults(resp *sarama.ProduceResponse) (map[int32]partiti
 func (c *produceCmd) produce(in chan []message, out chan printContext) {
 	for b := range in {
 		if err := c.produceBatch(c.leaders, b, out); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error()) // TODO: failf
+			log.Printf("produce batch error %v", err.Error())
 			return
 		}
 	}
