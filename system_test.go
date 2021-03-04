@@ -30,9 +30,10 @@ func (c *cmd) run(name string, args ...string) (int, string, string) {
 	cmd.Stdout = &stdOut
 	cmd.Stderr = &stdErr
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=localhost:9092", envBrokers))
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=testdata/test-secrets/auth.json", envAuth))
-	cmd.Env = append(cmd.Env, "GODEBUG=x509ignoreCN=0")
+	cmd.Env = append(cmd.Env,
+		fmt.Sprintf("%s=localhost:9092", envBrokers),
+		fmt.Sprintf("%s=testdata/test-secrets/auth.json", envAuth),
+		"GODEBUG=x509ignoreCN=0")
 
 	if len(c.in) > 0 {
 		cmd.Stdin = strings.NewReader(c.in)
