@@ -360,14 +360,14 @@ func (c *consumeCmd) parseFlags(as []string) consumeArgs {
 	flags := flag.NewFlagSet("consume", flag.ContinueOnError)
 	flags.StringVar(&a.topic, "topic", "", "Topic to consume (required).")
 	flags.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
-	flags.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
+	flags.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env", envAuth))
 	flags.StringVar(&a.offsets, "offsets", "", "Specifies what messages to read by partition and offset range (defaults to all).")
 	flags.DurationVar(&a.timeout, "timeout", time.Duration(0), "Timeout after not reading messages (default 0 to disable).")
 	flags.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
-	flags.BoolVar(&a.pretty, "pretty", true, "Control output pretty printing.")
+	flags.BoolVar(&a.pretty, "pretty", false, "Control output pretty printing.")
 	flags.StringVar(&a.version, "version", "", "Kafka protocol version")
-	flags.StringVar(&a.encVal, "enc.value", "string", "Present message value as (string|hex|base64), defaults to string.")
-	flags.StringVar(&a.encKey, "enc.key", "string", "Present message key as (string|hex|base64), defaults to string.")
+	flags.StringVar(&a.encVal, "enc.value", "string", "Present message value as string|hex|base64, defaults to string.")
+	flags.StringVar(&a.encKey, "enc.key", "string", "Present message key as string|hex|base64, defaults to string.")
 	flags.StringVar(&a.group, "group", "", "Consumer group to use for marking offsets. kt will mark offsets if this arg is supplied.")
 
 	flags.Usage = func() {

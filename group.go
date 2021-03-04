@@ -449,7 +449,7 @@ func (cmd *groupCmd) parseFlags(as []string) groupArgs {
 	flags.StringVar(&args.filterTopics, "filter-topics", "", "Regex to filter topics.")
 	flags.StringVar(&args.reset, "reset", "", "Target offset to reset for consumer group (newest, oldest, or specific offset)")
 	flags.BoolVar(&args.verbose, "verbose", false, "More verbose logging to stderr.")
-	flags.BoolVar(&args.pretty, "pretty", true, "Control output pretty printing.")
+	flags.BoolVar(&args.pretty, "pretty", false, "Control output pretty printing.")
 	flags.StringVar(&args.version, "version", "", "Kafka protocol version")
 	flags.StringVar(&args.partitions, "partitions", allPartitionsHuman, "comma separated list of partitions to limit offsets to, or all")
 	flags.BoolVar(&args.offsets, "offsets", true, "Controls if offsets should be fetched (defauls to true)")

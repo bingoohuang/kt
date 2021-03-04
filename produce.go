@@ -52,7 +52,7 @@ func (c *produceCmd) read(as []string) produceArgs {
 	f.IntVar(&a.batch, "batch", 1, "Max size of a batch before sending it off")
 	f.DurationVar(&a.timeout, "timeout", 50*time.Millisecond, "Duration to wait for batch to be filled before sending it off")
 	f.BoolVar(&a.verbose, "verbose", false, "Verbose output")
-	f.BoolVar(&a.pretty, "pretty", true, "Control output pretty printing.")
+	f.BoolVar(&a.pretty, "pretty", false, "Control output pretty printing.")
 	f.BoolVar(&a.literal, "literal", false, "Interpret stdin line literally and pass it as value, key as null.")
 	f.StringVar(&a.version, "version", "", "Kafka protocol version, like 0.10.0.0")
 	f.StringVar(&a.compress, "compress", "", "Kafka message compress codec [gzip|snappy|lz4], defaults to none")
@@ -508,6 +508,7 @@ To specify the key, value and partition individually pass it as a JSON object
 like the following:
 
     {"key": "id-23", "value": "message content", "partition": 0}
+    {"k": "id-23", "v": "message content", "p": 0}
 
 In case the input line cannot be interpeted as a JSON object the key and value
 both default to the input line and partition to 0.
