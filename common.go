@@ -127,7 +127,7 @@ func readStdinLines(max int, out chan string) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintf(os.Stderr, "scanning input failed err=%v\n", err)
+		fmt.Fprintf(os.Stderr, "scanning input err=%v\n", err)
 	}
 	close(out)
 }
@@ -158,6 +158,12 @@ func kafkaAbs(i int32) int32 {
 	default:
 		return i
 	}
+}
+
+var random = rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
+
+func randPartition(partitions int32) int32 {
+	return random.Int31n(partitions)
 }
 
 func hashCodePartition(key string, partitions int32) int32 {

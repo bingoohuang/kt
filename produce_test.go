@@ -226,7 +226,7 @@ func TestMakeSaramaMessage(t *testing.T) {
 
 func TestDeserializeLines(t *testing.T) {
 	target := &produceCmd{}
-	target.partitioner = "hashCode"
+	target.partitioner = "hash"
 	data := []struct {
 		in             string
 		literal        bool
