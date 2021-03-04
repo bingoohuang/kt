@@ -568,7 +568,6 @@ The default is to consume from the oldest offset on every partition for the give
 
 The following syntax is supported for each offset:
   (oldest|newest|resume)?(+|-)?(\d+)?
-
  - "oldest" and "newest" refer to the oldest and newest offsets known for a given partition.
  - "resume" can be used in combination with -group.
  - You can use "+" with a numeric value to skip the given number of messages since the oldest offset. 

@@ -451,12 +451,8 @@ The values supplied on the command line win over environment variable values.
 
 Input is read from stdin and separated by newlines.
 
-If you want to use the -partitioner keep in mind that the hashCode
-implementation is not the default for Kafka's producer anymore.
-
 To specify the key, value and partition individually pass it as a JSON object
 like the following:
-
     {"key": "id-23", "value": "message content", "partition": 0}
     {"k": "id-23", "v": "message content", "p": 0}
 
@@ -464,26 +460,20 @@ In case the input line cannot be interpeted as a JSON object the key and value
 both default to the input line and partition to 0.
 
 Examples:
-
 Send a single message with a specific key:
-
   $ echo '{"key": "id-23", "value": "ola", "partition": 0}' | kt produce -topicInfo greetings
   Sent message to partition 0 at offset 3.
-
   $ echo '{"k": "id-23", "v": "ola", "p": 0}' | kt produce -topicInfo greetings
   Sent message to partition 0 at offset 3.
-
   $ kt consume -topicInfo greetings -timeout 1s -offsets 0:3-
   {"partition":0,"offset":3,"key":"id-23","message":"ola"}
 
 Keep reading input from stdin until interrupted (via ^C).
-
   $ kt produce -topicInfo greetings
   hello.
   Sent message to partition 0 at offset 4.
   bonjour.
   Sent message to partition 0 at offset 5.
-
   $ kt consume -topicInfo greetings -timeout 1s -offsets 0:4-
   {"partition":0,"offset":4,"key":"hello.","message":"hello."}
   {"partition":0,"offset":5,"key":"bonjour.","message":"bonjour."}
