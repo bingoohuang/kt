@@ -22,10 +22,10 @@ import (
 )
 
 const (
-	EnvAuth         = "KT_AUTH"
-	EnvAdminTimeout = "KT_ADMIN_TIMEOUT"
-	EnvBrokers      = "KT_BROKERS"
-	EnvTopic        = "KT_TOPIC"
+	envAuth         = "KT_AUTH"
+	envAdminTimeout = "KT_ADMIN_TIMEOUT"
+	envBrokers      = "KT_BROKERS"
+	envTopic        = "KT_TOPIC"
 )
 
 var invalidClientIDCharactersRegExp = regexp.MustCompile(`[^a-zA-Z0-9_-]`)
@@ -184,15 +184,15 @@ func randomString(length int) string {
 	return fmt.Sprintf("%x", buf)[:length]
 }
 
-// setupCerts takes the paths to a tls certificate, CA, and certificate key in
+// SetupCerts takes the paths to a tls certificate, CA, and certificate key in
 // a PEM format and returns a constructed tls.Config object.
-func setupCerts(certPath, caPath, keyPath string) (*tls.Config, error) {
+func SetupCerts(certPath, caPath, keyPath string) (*tls.Config, error) {
 	if certPath == "" && caPath == "" && keyPath == "" {
 		return nil, nil
 	}
 
 	if certPath == "" || caPath == "" || keyPath == "" {
-		err := fmt.Errorf("certificate, CA and key path are required - got cert=%#v ca=%#v key=%#v", certPath, caPath, keyPath)
+		err := fmt.Errorf("certificate, CA and key path are required - got cert=%s ca=%s key=%s", certPath, caPath, keyPath)
 		return nil, err
 	}
 
@@ -212,11 +212,10 @@ func setupCerts(certPath, caPath, keyPath string) (*tls.Config, error) {
 		return nil, err
 	}
 
-	bundle := &tls.Config{
+	return &tls.Config{
 		RootCAs:      caPool,
 		Certificates: []tls.Certificate{clientCert},
-	}
-	return bundle, nil
+	}, nil
 }
 
 type authConfig struct {

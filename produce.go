@@ -48,7 +48,7 @@ func (c *produceCmd) read(as []string) produceArgs {
 	f.StringVar(&a.topic, "topic", "", "Topic to produce to (required).")
 	f.IntVar(&a.partition, "partition", 0, "Partition to produce to (defaults to 0).")
 	f.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 if omitted (defaults to localhost:9092).")
-	f.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", EnvAuth))
+	f.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
 	f.IntVar(&a.batch, "batch", 1, "Max size of a batch before sending it off")
 	f.DurationVar(&a.timeout, "timeout", 50*time.Millisecond, "Duration to wait for batch to be filled before sending it off")
 	f.BoolVar(&a.verbose, "verbose", false, "Verbose output")
@@ -84,7 +84,7 @@ func (c *produceCmd) failStartup(msg string) {
 
 func (c *produceCmd) parseArgs(as []string) {
 	a := c.read(as)
-	envTopic := os.Getenv(EnvTopic)
+	envTopic := os.Getenv(envTopic)
 	if a.topic == "" {
 		if envTopic == "" {
 			c.failStartup("Topic name is required.")
@@ -94,21 +94,19 @@ func (c *produceCmd) parseArgs(as []string) {
 	}
 	c.topic = a.topic
 
-	readAuthFile(a.auth, os.Getenv(EnvAuth), &c.auth)
+	readAuthFile(a.auth, os.Getenv(envAuth), &c.auth)
 
 	c.brokers = parseBrokers(a.brokers)
 
 	if !anyOf(a.decVal, "string", "hex", "base64") {
 		c.failStartup(fmt.Sprintf(`bad dec.val argument %#v, only allow string/hex/base64.`, a.decVal))
-		return
 	}
-	c.valDecoder = ParseStringDecoder(a.decVal)
+	c.valDecoder = parseStringDecoder(a.decVal)
 
 	if !anyOf(a.decKey, "string", "hex", "base64") {
 		c.failStartup(fmt.Sprintf(`bad dec.key argument %#v, only allow string/hex/base64.`, a.decVal))
-		return
 	}
-	c.keyDecoder = ParseStringDecoder(a.decKey)
+	c.keyDecoder = parseStringDecoder(a.decKey)
 
 	c.batch = a.batch
 	c.timeout = a.timeout
@@ -150,8 +148,8 @@ func kafkaCompression(codecName string) sarama.CompressionCodec {
 
 func (c *produceCmd) findLeaders() {
 	var (
-		usr *user.User
 		err error
+		usr *user.User
 		res *sarama.MetadataResponse
 		req = sarama.MetadataRequest{Topics: []string{c.topic}}
 		cfg = sarama.NewConfig()
@@ -237,7 +235,7 @@ type produceCmd struct {
 	version                sarama.KafkaVersion
 	compress               sarama.CompressionCodec
 	partitioner            string
-	keyDecoder, valDecoder StringDecoder
+	keyDecoder, valDecoder stringDecoder
 	bufSize                int
 
 	leaders map[int32]*sarama.Broker
@@ -317,7 +315,7 @@ func (c *produceCmd) deserializeLines(in chan string, out chan message, partitio
 		}
 
 		if msg.Partition == nil {
-			var part int32 = 0
+			part := int32(0)
 			if msg.Key != nil && c.partitioner == "hashCode" {
 				part = hashCodePartition(*msg.Key, partitionCount)
 			}
@@ -362,9 +360,9 @@ type partitionProduceResult struct {
 	count int64
 }
 
-type StringDecoder func(s string) ([]byte, error)
+type stringDecoder func(string) ([]byte, error)
 
-func ParseStringDecoder(decoder string) StringDecoder {
+func parseStringDecoder(decoder string) stringDecoder {
 	switch decoder {
 	case "hex":
 		return hex.DecodeString
@@ -375,6 +373,7 @@ func ParseStringDecoder(decoder string) StringDecoder {
 	}
 }
 
+// FirstNotNil returns the first non-nil string.
 func FirstNotNil(a ...*string) string {
 	for _, i := range a {
 		if i != nil {
@@ -537,4 +536,4 @@ Keep reading input from stdin until interrupted (via ^C).
   $ kt consume -topic greetings -timeout 1s -offsets 0:4-
   {"partition":0,"offset":4,"key":"hello.","message":"hello."}
   {"partition":0,"offset":5,"key":"bonjour.","message":"bonjour."}
-`, EnvTopic, EnvBrokers)
+`, envTopic, envBrokers)

@@ -49,7 +49,7 @@ type topic struct {
 }
 
 type partition struct {
-	Id           int32   `json:"id"`
+	ID           int32   `json:"id"`
 	OldestOffset int64   `json:"oldest"`
 	NewestOffset int64   `json:"newest"`
 	Leader       string  `json:"leader,omitempty"`
@@ -64,7 +64,7 @@ func (c *topicCmd) parseFlags(as []string) topicArgs {
 	)
 
 	flags.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted.")
-	flags.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", EnvAuth))
+	flags.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
 	flags.BoolVar(&a.partitions, "partitions", false, "Include information per partition.")
 	flags.BoolVar(&a.leaders, "leaders", false, "Include leader information per partition.")
 	flags.BoolVar(&a.replicas, "replicas", false, "Include replica ids per partition.")
@@ -103,7 +103,7 @@ func (c *topicCmd) parseArgs(as []string) {
 		failf("invalid regex for filter err=%s", err)
 	}
 
-	readAuthFile(args.auth, os.Getenv(EnvAuth), &c.auth)
+	readAuthFile(args.auth, os.Getenv(envAuth), &c.auth)
 
 	c.filter = re
 	c.partitions = args.partitions
@@ -231,7 +231,7 @@ func (c *topicCmd) readTopic(name string) (topic, error) {
 	}
 
 	for _, p := range ps {
-		np := partition{Id: p}
+		np := partition{ID: p}
 
 		if np.OldestOffset, err = c.client.GetOffset(name, p, sarama.OffsetOldest); err != nil {
 			return top, err
@@ -267,4 +267,4 @@ func (c *topicCmd) readTopic(name string) (topic, error) {
 var topicDocString = fmt.Sprintf(`
 The values for -brokers can also be set via the environment variable %s respectively.
 The values supplied on the command line win over environment variable values.`,
-	EnvBrokers)
+	envBrokers)

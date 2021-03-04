@@ -10,7 +10,7 @@ func TestTopicParseArgs(t *testing.T) {
 	target := &topicCmd{}
 	givenBroker := "hans:9092"
 	expectedBrokers := []string{givenBroker}
-	os.Setenv(EnvBrokers, givenBroker)
+	os.Setenv(envBrokers, givenBroker)
 
 	target.parseArgs([]string{})
 	if !reflect.DeepEqual(target.brokers, expectedBrokers) {
@@ -22,7 +22,7 @@ func TestTopicParseArgs(t *testing.T) {
 		return
 	}
 
-	os.Setenv(EnvBrokers, "")
+	os.Setenv(envBrokers, "")
 	expectedBrokers = []string{"localhost:9092"}
 
 	target.parseArgs([]string{})
@@ -35,7 +35,7 @@ func TestTopicParseArgs(t *testing.T) {
 		return
 	}
 
-	os.Setenv(EnvBrokers, "BLABB")
+	os.Setenv(envBrokers, "BLABB")
 	expectedBrokers = []string{givenBroker}
 
 	target.parseArgs([]string{"-brokers", givenBroker})

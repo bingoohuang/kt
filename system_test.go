@@ -30,8 +30,8 @@ func (c *cmd) run(name string, args ...string) (int, string, string) {
 	cmd.Stdout = &stdOut
 	cmd.Stderr = &stdErr
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=localhost:9092", EnvBrokers))
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=testdata/test-secrets/auth.json", EnvAuth))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=localhost:9092", envBrokers))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=testdata/test-secrets/auth.json", envAuth))
 	cmd.Env = append(cmd.Env, "GODEBUG=x509ignoreCN=0")
 
 	if len(c.in) > 0 {
@@ -50,7 +50,7 @@ func (c *cmd) run(name string, args ...string) (int, string, string) {
 func build(t *testing.T) {
 	var status int
 
-	status, _, _ = newCmd().run("make", "build")
+	status, _, _ = newCmd().run("go", "build")
 	require.Zero(t, status)
 
 	status, _, _ = newCmd().run("ls", "kt")

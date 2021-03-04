@@ -124,8 +124,8 @@ func TestProduceParseArgs(t *testing.T) {
 	expectedBrokers := []string{givenBroker}
 	target := &produceCmd{}
 
-	os.Setenv(EnvTopic, expectedTopic)
-	os.Setenv(EnvBrokers, givenBroker)
+	os.Setenv(envTopic, expectedTopic)
+	os.Setenv(envBrokers, givenBroker)
 
 	target.parseArgs([]string{})
 	if target.topic != expectedTopic ||
@@ -141,8 +141,8 @@ func TestProduceParseArgs(t *testing.T) {
 	}
 
 	// default brokers to localhost:9092
-	os.Setenv(EnvTopic, "")
-	os.Setenv(EnvBrokers, "")
+	os.Setenv(envTopic, "")
+	os.Setenv(envBrokers, "")
 	expectedBrokers = []string{"localhost:9092"}
 
 	target.parseArgs([]string{"-topic", expectedTopic})
@@ -159,8 +159,8 @@ func TestProduceParseArgs(t *testing.T) {
 	}
 
 	// command line arg wins
-	os.Setenv(EnvTopic, "BLUBB")
-	os.Setenv(EnvBrokers, "BLABB")
+	os.Setenv(envTopic, "BLUBB")
+	os.Setenv(envBrokers, "BLABB")
 	expectedBrokers = []string{givenBroker}
 
 	target.parseArgs([]string{"-topic", expectedTopic, "-brokers", givenBroker})
@@ -196,7 +196,7 @@ func newMessage(key, value string, partition int32) message {
 }
 
 func TestMakeSaramaMessage(t *testing.T) {
-	decoder := ParseStringDecoder("string")
+	decoder := parseStringDecoder("string")
 	target := &produceCmd{keyDecoder: decoder, valDecoder: decoder}
 	key, value := "key", "value"
 	msg := message{Key: &key, Value: &value}
@@ -205,7 +205,7 @@ func TestMakeSaramaMessage(t *testing.T) {
 	require.Equal(t, []byte(key), actual.Key)
 	require.Equal(t, []byte(value), actual.Value)
 
-	decoder = ParseStringDecoder("hex")
+	decoder = parseStringDecoder("hex")
 	target.keyDecoder, target.valDecoder = decoder, decoder
 	key, value = "41", "42"
 	msg = message{Key: &key, Value: &value}
@@ -214,7 +214,7 @@ func TestMakeSaramaMessage(t *testing.T) {
 	require.Equal(t, []byte("A"), actual.Key)
 	require.Equal(t, []byte("B"), actual.Value)
 
-	decoder = ParseStringDecoder("base64")
+	decoder = parseStringDecoder("base64")
 	target.keyDecoder, target.valDecoder = decoder, decoder
 	key, value = "aGFucw==", "cGV0ZXI="
 	msg = message{Key: &key, Value: &value}

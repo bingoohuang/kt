@@ -5,11 +5,11 @@ import (
 	"os"
 )
 
-const AppVersion = "v13.0.0+"
+const appVersion = "v13.0.0+"
 
 var buildVersion, buildTime string
 
-var versionMessage = fmt.Sprintf(`kt version %s`, AppVersion)
+var versionMessage = fmt.Sprintf(`kt version %s`, appVersion)
 
 func init() {
 	if buildVersion == "" && buildTime == "" {
@@ -50,7 +50,7 @@ You can set the file name via an "-auth" flag to each command or
 set it via the environment variable %s.
 
 You can find more details at https://github.com/fgeller/kt
-%s`, EnvAuth, versionMessage)
+%s`, envAuth, versionMessage)
 
 func parseArgs() command {
 	if len(os.Args) < 2 {

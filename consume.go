@@ -26,7 +26,7 @@ type consumeCmd struct {
 	timeout                time.Duration
 	verbose, pretty        bool
 	version                sarama.KafkaVersion
-	keyEncoder, valEncoder BytesEncoder
+	keyEncoder, valEncoder bytesEncoder
 	group                  string
 
 	client        sarama.Client
@@ -81,17 +81,17 @@ type interval struct {
 }
 
 type consumeArgs struct {
-	topic       string
-	brokers     string
-	auth        string
-	timeout     time.Duration
-	offsets     string
-	verbose     bool
-	version     string
-	encodeValue string
-	encodeKey   string
-	pretty      bool
-	group       string
+	topic   string
+	brokers string
+	auth    string
+	timeout time.Duration
+	offsets string
+	verbose bool
+	version string
+	encVal  string
+	encKey  string
+	pretty  bool
+	group   string
 }
 
 func (c *consumeCmd) failStartup(msg string) {
@@ -101,48 +101,46 @@ func (c *consumeCmd) failStartup(msg string) {
 
 func (c *consumeCmd) parseArgs(as []string) {
 	var (
-		err  error
-		args = c.parseFlags(as)
+		err error
+		a   = c.parseFlags(as)
 	)
 
-	envTopic := os.Getenv(EnvTopic)
-	if args.topic == "" {
+	envTopic := os.Getenv(envTopic)
+	if a.topic == "" {
 		if envTopic == "" {
 			c.failStartup("Topic name is required.")
 			return
 		}
-		args.topic = envTopic
+		a.topic = envTopic
 	}
-	c.topic = args.topic
-	c.timeout = args.timeout
-	c.verbose = args.verbose
-	c.pretty = args.pretty
-	c.version = kafkaVersion(args.version)
-	c.group = args.group
+	c.topic = a.topic
+	c.timeout = a.timeout
+	c.verbose = a.verbose
+	c.pretty = a.pretty
+	c.version = kafkaVersion(a.version)
+	c.group = a.group
 
-	readAuthFile(args.auth, os.Getenv(EnvAuth), &c.auth)
+	readAuthFile(a.auth, os.Getenv(envAuth), &c.auth)
 
-	if args.encodeValue != "string" && args.encodeValue != "hex" && args.encodeValue != "base64" {
-		c.failStartup(fmt.Sprintf(`unsupported encodevalue argument %#v, only string, hex and base64 are supported.`, args.encodeValue))
-		return
+	if !anyOf(a.encVal, "string", "hex", "base64") {
+		c.failStartup(fmt.Sprintf(`bad enc.val argument %#v, only allow string/hex/base64.`, a.encVal))
 	}
-	c.valEncoder = ParseEncodeBytesFn(args.encodeValue)
+	c.valEncoder = parseEncodeBytesFn(a.encVal)
 
-	if args.encodeKey != "string" && args.encodeKey != "hex" && args.encodeKey != "base64" {
-		c.failStartup(fmt.Sprintf(`unsupported encodekey argument %#v, only string, hex and base64 are supported.`, args.encodeValue))
-		return
+	if a.encKey != "string" && a.encKey != "hex" && a.encKey != "base64" {
+		c.failStartup(fmt.Sprintf(`bad enc.key argument %#v, only allow string/hex/base64.`, a.encVal))
 	}
-	c.keyEncoder = ParseEncodeBytesFn(args.encodeKey)
-	c.brokers = parseBrokers(args.brokers)
+	c.keyEncoder = parseEncodeBytesFn(a.encKey)
+	c.brokers = parseBrokers(a.brokers)
 
-	c.offsets, err = parseOffsets(args.offsets)
+	c.offsets, err = parseOffsets(a.offsets)
 	if err != nil {
 		c.failStartup(fmt.Sprintf("%s", err))
 	}
 }
 
 func parseBrokers(argBrokers string) []string {
-	envBrokers := os.Getenv(EnvBrokers)
+	envBrokers := os.Getenv(envBrokers)
 	if argBrokers == "" {
 		if envBrokers != "" {
 			argBrokers = envBrokers
@@ -362,14 +360,14 @@ func (c *consumeCmd) parseFlags(as []string) consumeArgs {
 	flags := flag.NewFlagSet("consume", flag.ContinueOnError)
 	flags.StringVar(&a.topic, "topic", "", "Topic to consume (required).")
 	flags.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
-	flags.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", EnvAuth))
+	flags.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
 	flags.StringVar(&a.offsets, "offsets", "", "Specifies what messages to read by partition and offset range (defaults to all).")
 	flags.DurationVar(&a.timeout, "timeout", time.Duration(0), "Timeout after not reading messages (default 0 to disable).")
 	flags.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
 	flags.BoolVar(&a.pretty, "pretty", true, "Control output pretty printing.")
 	flags.StringVar(&a.version, "version", "", "Kafka protocol version")
-	flags.StringVar(&a.encodeValue, "enc.value", "string", "Present message value as (string|hex|base64), defaults to string.")
-	flags.StringVar(&a.encodeKey, "enc.key", "string", "Present message key as (string|hex|base64), defaults to string.")
+	flags.StringVar(&a.encVal, "enc.value", "string", "Present message value as (string|hex|base64), defaults to string.")
+	flags.StringVar(&a.encKey, "enc.key", "string", "Present message key as (string|hex|base64), defaults to string.")
 	flags.StringVar(&a.group, "group", "", "Consumer group to use for marking offsets. kt will mark offsets if this arg is supplied.")
 
 	flags.Usage = func() {
@@ -466,12 +464,11 @@ func (c *consumeCmd) consume(partitions []int32) {
 
 func (c *consumeCmd) consumePartition(out chan printContext, partition int32) {
 	var (
-		offsets interval
-		err     error
-		pcon    sarama.PartitionConsumer
-		start   int64
-		end     int64
-		ok      bool
+		offsets    interval
+		err        error
+		pcon       sarama.PartitionConsumer
+		start, end int64
+		ok         bool
 	)
 
 	if offsets, ok = c.offsets[partition]; !ok {
@@ -504,7 +501,7 @@ type consumedMessage struct {
 	Timestamp *time.Time `json:"timestamp,omitempty"`
 }
 
-func newConsumedMessage(m *sarama.ConsumerMessage, keyEncoder, valEncoder BytesEncoder) consumedMessage {
+func newConsumedMessage(m *sarama.ConsumerMessage, keyEncoder, valEncoder bytesEncoder) consumedMessage {
 	result := consumedMessage{
 		Partition: m.Partition,
 		Offset:    m.Offset,
@@ -519,9 +516,9 @@ func newConsumedMessage(m *sarama.ConsumerMessage, keyEncoder, valEncoder BytesE
 	return result
 }
 
-type BytesEncoder func(src []byte) string
+type bytesEncoder func(src []byte) string
 
-func ParseEncodeBytesFn(encoding string) BytesEncoder {
+func parseEncodeBytesFn(encoding string) bytesEncoder {
 	switch encoding {
 	case "hex":
 		return hex.EncodeToString
@@ -532,7 +529,7 @@ func ParseEncodeBytesFn(encoding string) BytesEncoder {
 	}
 }
 
-func encodeBytes(data []byte, encoder BytesEncoder) string {
+func encodeBytes(data []byte, encoder bytesEncoder) string {
 	if data == nil {
 		return ""
 	}
@@ -722,4 +719,4 @@ and
 
 Will achieve the same as the two examples above.
 
-`, EnvTopic, EnvBrokers)
+`, envTopic, envBrokers)

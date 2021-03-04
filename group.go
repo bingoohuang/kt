@@ -276,15 +276,15 @@ func (cmd *groupCmd) findGroupsOnBroker(broker *sarama.Broker, results chan find
 		resp *sarama.ListGroupsResponse
 	)
 	if err = cmd.connect(broker); err != nil {
-		errs <- fmt.Errorf("failed to connect to broker %#v err=%s\n", broker.Addr(), err)
+		errs <- fmt.Errorf("failed to connect to broker %s err=%q", broker.Addr(), err)
 	}
 
 	if resp, err = broker.ListGroups(&sarama.ListGroupsRequest{}); err != nil {
-		errs <- fmt.Errorf("failed to list brokers on %#v err=%v", broker.Addr(), err)
+		errs <- fmt.Errorf("failed to list brokers on %s err=%q", broker.Addr(), err)
 	}
 
 	if resp.Err != sarama.ErrNoError {
-		errs <- fmt.Errorf("failed to list brokers on %#v err=%v", broker.Addr(), resp.Err)
+		errs <- fmt.Errorf("failed to list brokers on %s err=%v", broker.Addr(), resp.Err)
 	}
 
 	for name := range resp.Groups {
@@ -345,7 +345,7 @@ func (cmd *groupCmd) parseArgs(as []string) {
 		args = cmd.parseFlags(as)
 	)
 
-	envTopic := os.Getenv(EnvTopic)
+	envTopic := os.Getenv(envTopic)
 	if args.topic == "" {
 		args.topic = envTopic
 	}
@@ -357,7 +357,7 @@ func (cmd *groupCmd) parseArgs(as []string) {
 	cmd.offsets = args.offsets
 	cmd.version = kafkaVersion(args.version)
 
-	readAuthFile(args.auth, os.Getenv(EnvAuth), &cmd.auth)
+	readAuthFile(args.auth, os.Getenv(envAuth), &cmd.auth)
 
 	switch args.partitions {
 	case "", "all":
@@ -407,7 +407,7 @@ func (cmd *groupCmd) parseArgs(as []string) {
 		}
 	}
 
-	envBrokers := os.Getenv(EnvBrokers)
+	envBrokers := os.Getenv(envBrokers)
 	if args.brokers == "" {
 		if envBrokers != "" {
 			args.brokers = envBrokers
@@ -443,7 +443,7 @@ func (cmd *groupCmd) parseFlags(as []string) groupArgs {
 	flags := flag.NewFlagSet("group", flag.ContinueOnError)
 	flags.StringVar(&args.topic, "topic", "", "Topic to consume (required).")
 	flags.StringVar(&args.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
-	flags.StringVar(&args.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", EnvAuth))
+	flags.StringVar(&args.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
 	flags.StringVar(&args.group, "group", "", "Consumer group name.")
 	flags.StringVar(&args.filterGroups, "filter-groups", "", "Regex to filter groups.")
 	flags.StringVar(&args.filterTopics, "filter-topics", "", "Regex to filter topics.")
@@ -501,4 +501,4 @@ kt group -reset 23 -topic fav-topic -group specials -partitions 2
 To reset a consumer group's offset for all partitions:
 
 kt group -reset newest -topic fav-topic -group specials -partitions all
-`, EnvTopic, EnvBrokers)
+`, envTopic, envBrokers)
