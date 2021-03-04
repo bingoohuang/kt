@@ -39,9 +39,10 @@ type topicCmd struct {
 
 	client sarama.Client
 	admin  sarama.ClusterAdmin
+	out    chan printContext
 }
 
-type topic struct {
+type topicInfo struct {
 	Name       string            `json:"name"`
 	Partitions []partition       `json:"partitions,omitempty"`
 	Config     map[string]string `json:"config,omitempty"`
@@ -59,19 +60,19 @@ type partition struct {
 func (r *topicCmd) parseFlags(as []string) topicArgs {
 	var a topicArgs
 
-	f := flag.NewFlagSet("topic", flag.ContinueOnError)
+	f := flag.NewFlagSet("topicInfo", flag.ContinueOnError)
 	f.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted.")
 	f.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
 	f.BoolVar(&a.partitions, "partitions", false, "Include information per partition.")
 	f.BoolVar(&a.leaders, "leaders", false, "Include leader information per partition.")
 	f.BoolVar(&a.replicas, "replicas", false, "Include replica ids per partition.")
-	f.BoolVar(&a.config, "config", false, "Include topic configuration.")
+	f.BoolVar(&a.config, "config", false, "Include topicInfo configuration.")
 	f.StringVar(&a.filter, "filter", "", "Regex to filter topics by name.")
 	f.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
 	f.BoolVar(&a.pretty, "pretty", true, "Control output pretty printing.")
 	f.StringVar(&a.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or env %s", envVersion))
 	f.Usage = func() {
-		fmt.Fprint(os.Stderr, "Usage of topic:")
+		fmt.Fprint(os.Stderr, "Usage of topicInfo:")
 		f.PrintDefaults()
 		fmt.Fprint(os.Stderr, topicDocString)
 	}
@@ -87,13 +88,11 @@ func (r *topicCmd) parseFlags(as []string) topicArgs {
 }
 
 func (r *topicCmd) parseArgs(as []string) {
-	var err error
-	var re *regexp.Regexp
-
 	a := r.parseFlags(as)
 	r.brokers = parseBrokers(a.brokers)
 
-	if re, err = regexp.Compile(a.filter); err != nil {
+	re, err := regexp.Compile(a.filter)
+	if err != nil {
 		failf("invalid regex for filter err=%s", err)
 	}
 
@@ -110,11 +109,9 @@ func (r *topicCmd) parseArgs(as []string) {
 }
 
 func (r *topicCmd) connect() {
-	var err error
-
 	cfg := sarama.NewConfig()
 	cfg.Version = r.version
-	cfg.ClientID = "kt-topic-" + currentUserName()
+	cfg.ClientID = "kt-topicInfo-" + currentUserName()
 	if r.verbose {
 		log.Printf("sarama client configuration %#v\n", cfg)
 	}
@@ -123,6 +120,7 @@ func (r *topicCmd) connect() {
 		log.Printf("Failed to setupAuth err=%v", err)
 	}
 
+	var err error
 	if r.client, err = sarama.NewClient(r.brokers, cfg); err != nil {
 		failf("failed to create client err=%v", err)
 	}
@@ -154,49 +152,38 @@ func (r *topicCmd) run(as []string) {
 		}
 	}
 
-	out := make(chan printContext)
-	go print(out, r.pretty)
+	r.out = make(chan printContext)
+	go printOut(r.out, r.pretty)
 
 	var wg sync.WaitGroup
 	for _, tn := range topics {
 		wg.Add(1)
 		go func(top string) {
-			r.print(top, out)
+			r.print(top)
 			wg.Done()
 		}(tn)
 	}
 	wg.Wait()
 }
 
-func (r *topicCmd) print(name string, out chan printContext) {
-	var (
-		top topic
-		err error
-	)
-
-	if top, err = r.readTopic(name); err != nil {
-		log.Printf("failed to read info for topic %s. err=%v", name, err)
+func (r *topicCmd) print(name string) {
+	top, err := r.readTopic(name)
+	if err != nil {
+		log.Printf("failed to read info for topicInfo %s. err=%v", name, err)
 		return
 	}
 
 	ctx := printContext{output: top, done: make(chan struct{})}
-	out <- ctx
+	r.out <- ctx
 	<-ctx.done
 }
 
-func (r *topicCmd) readTopic(name string) (topic, error) {
-	var (
-		err           error
-		ps            []int32
-		led           *sarama.Broker
-		top           = topic{Name: name}
-		configEntries []sarama.ConfigEntry
-	)
-
+func (r *topicCmd) readTopic(name string) (topicInfo, error) {
+	top := topicInfo{Name: name}
 	if r.config {
-
 		resource := sarama.ConfigResource{Name: name, Type: sarama.TopicResource}
-		if configEntries, err = r.admin.DescribeConfig(resource); err != nil {
+		configEntries, err := r.admin.DescribeConfig(resource)
+		if err != nil {
 			return top, err
 		}
 
@@ -210,6 +197,8 @@ func (r *topicCmd) readTopic(name string) (topic, error) {
 		return top, nil
 	}
 
+	var err error
+	var ps []int32
 	if ps, err = r.client.Partitions(name); err != nil {
 		return top, err
 	}
@@ -226,9 +215,11 @@ func (r *topicCmd) readTopic(name string) (topic, error) {
 		}
 
 		if r.leaders {
-			if led, err = r.client.Leader(name, p); err != nil {
+			led, err := r.client.Leader(name, p)
+			if err != nil {
 				return top, err
 			}
+
 			np.Leader = led.Addr()
 		}
 

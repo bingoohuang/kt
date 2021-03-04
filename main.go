@@ -37,7 +37,7 @@ Usage:
 The commands are:
 	consume    consume messages.
 	produce    produce messages.
-	topic      topic information.
+	topicInfo      topicInfo information.
 	group      consumer group information and modification.
 	admin      basic cluster administration.
 
@@ -62,7 +62,7 @@ func parseArgs() command {
 		return &consumeCmd{}
 	case "produce":
 		return &produceCmd{}
-	case "topic":
+	case "topicInfo":
 		return &topicCmd{}
 	case "group":
 		return &groupCmd{}

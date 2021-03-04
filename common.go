@@ -120,7 +120,7 @@ type printContext struct {
 	done   chan struct{}
 }
 
-func print(in <-chan printContext, pretty bool) {
+func printOut(in <-chan printContext, pretty bool) {
 	marshal := json.Marshal
 
 	if pretty && terminal.IsTerminal(syscall.Stdout) {
@@ -140,31 +140,24 @@ func print(in <-chan printContext, pretty bool) {
 }
 
 func quitf(msg string, args ...interface{}) {
-	exitf(0, msg, args...)
+	fmt.Fprintf(os.Stdout, msg+"\n", args...)
+	os.Exit(0)
 }
 
 func failf(msg string, args ...interface{}) {
-	exitf(1, msg, args...)
-}
-
-func exitf(code int, msg string, args ...interface{}) {
-	if code == 0 {
-		fmt.Fprintf(os.Stdout, msg+"\n", args...)
-	} else {
-		log.Printf(msg+"\n", args...)
-	}
-	os.Exit(code)
+	log.Printf(msg+"\n", args...)
+	os.Exit(1)
 }
 
 func readStdinLines(max int, out chan string) {
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Buffer(make([]byte, max), max)
+	s := bufio.NewScanner(os.Stdin)
+	s.Buffer(make([]byte, max), max)
 
-	for scanner.Scan() {
-		out <- scanner.Text()
+	for s.Scan() {
+		out <- s.Text()
 	}
 
-	if err := scanner.Err(); err != nil {
+	if err := s.Err(); err != nil {
 		log.Printf("scanning input err=%v\n", err)
 	}
 	close(out)
@@ -232,9 +225,8 @@ func sanitizeUsername(u string) string {
 }
 
 func randomString(length int) string {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	buf := make([]byte, length)
-	r.Read(buf)
+	random.Read(buf)
 	return fmt.Sprintf("%x", buf)[:length]
 }
 

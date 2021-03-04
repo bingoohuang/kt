@@ -42,7 +42,7 @@ type message struct {
 func (c *produceCmd) read(as []string) produceArgs {
 	var a produceArgs
 	f := flag.NewFlagSet("produce", flag.ContinueOnError)
-	f.StringVar(&a.topic, "topic", "", "Topic to produce to (required).")
+	f.StringVar(&a.topic, "topicInfo", "", "Topic to produce to (required).")
 	f.IntVar(&a.partition, "partition", 0, "Partition to produce to (defaults to 0).")
 	f.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 if omitted (defaults to localhost:9092).")
 	f.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
@@ -182,7 +182,7 @@ loop:
 		}
 	}
 
-	failf("failed to find leader for given topic")
+	failf("failed to find leader for given topicInfo")
 }
 
 type produceCmd struct {
@@ -202,6 +202,7 @@ type produceCmd struct {
 	bufSize                int
 
 	leaders map[int32]*sarama.Broker
+	out     chan printContext
 }
 
 func (c *produceCmd) run(as []string) {
@@ -216,17 +217,17 @@ func (c *produceCmd) run(as []string) {
 	lines := make(chan string)
 	messages := make(chan message)
 	batchedMessages := make(chan []message)
-	out := make(chan printContext)
+	c.out = make(chan printContext)
 	q := make(chan struct{})
 
 	go readStdinLines(c.bufSize, stdin)
-	go print(out, c.pretty)
+	go printOut(c.out, c.pretty)
 
 	go listenForInterrupt(q)
 	go c.readInput(q, stdin, lines)
 	go c.deserializeLines(lines, messages, int32(len(c.leaders)))
 	go c.batchRecords(messages, batchedMessages)
-	c.produce(batchedMessages, out)
+	c.produce(batchedMessages)
 }
 
 func (c *produceCmd) close() {
@@ -359,7 +360,7 @@ func (c *produceCmd) makeSaramaMessage(msg message) (*sarama.Message, error) {
 	return sm, nil
 }
 
-func (c *produceCmd) produceBatch(leaders map[int32]*sarama.Broker, batch []message, out chan printContext) error {
+func (c *produceCmd) produceBatch(leaders map[int32]*sarama.Broker, batch []message) error {
 	requests := map[*sarama.Broker]*sarama.ProduceRequest{}
 	for _, msg := range batch {
 		broker, ok := leaders[*msg.Partition]
@@ -393,7 +394,7 @@ func (c *produceCmd) produceBatch(leaders map[int32]*sarama.Broker, batch []mess
 		for p, o := range offsets {
 			result := map[string]interface{}{"partition": p, "startOffset": o.start, "count": o.count}
 			ctx := printContext{output: result, done: make(chan struct{})}
-			out <- ctx
+			c.out <- ctx
 			<-ctx.done
 		}
 	}
@@ -420,9 +421,9 @@ func readPartitionOffsetResults(resp *sarama.ProduceResponse) (map[int32]partiti
 	return offsets, nil
 }
 
-func (c *produceCmd) produce(in chan []message, out chan printContext) {
+func (c *produceCmd) produce(in chan []message) {
 	for b := range in {
-		if err := c.produceBatch(c.leaders, b, out); err != nil {
+		if err := c.produceBatch(c.leaders, b); err != nil {
 			log.Printf("produce batch error %v", err.Error())
 			return
 		}
@@ -445,7 +446,7 @@ func (c *produceCmd) readInput(q chan struct{}, stdin chan string, out chan stri
 }
 
 var produceDocString = fmt.Sprintf(`
-The values for -topic and -brokers can also be set via environment variables %s and %s respectively.
+The values for -topicInfo and -brokers can also be set via environment variables %s and %s respectively.
 The values supplied on the command line win over environment variable values.
 
 Input is read from stdin and separated by newlines.
@@ -466,24 +467,24 @@ Examples:
 
 Send a single message with a specific key:
 
-  $ echo '{"key": "id-23", "value": "ola", "partition": 0}' | kt produce -topic greetings
+  $ echo '{"key": "id-23", "value": "ola", "partition": 0}' | kt produce -topicInfo greetings
   Sent message to partition 0 at offset 3.
 
-  $ echo '{"k": "id-23", "v": "ola", "p": 0}' | kt produce -topic greetings
+  $ echo '{"k": "id-23", "v": "ola", "p": 0}' | kt produce -topicInfo greetings
   Sent message to partition 0 at offset 3.
 
-  $ kt consume -topic greetings -timeout 1s -offsets 0:3-
+  $ kt consume -topicInfo greetings -timeout 1s -offsets 0:3-
   {"partition":0,"offset":3,"key":"id-23","message":"ola"}
 
 Keep reading input from stdin until interrupted (via ^C).
 
-  $ kt produce -topic greetings
+  $ kt produce -topicInfo greetings
   hello.
   Sent message to partition 0 at offset 4.
   bonjour.
   Sent message to partition 0 at offset 5.
 
-  $ kt consume -topic greetings -timeout 1s -offsets 0:4-
+  $ kt consume -topicInfo greetings -timeout 1s -offsets 0:4-
   {"partition":0,"offset":4,"key":"hello.","message":"hello."}
   {"partition":0,"offset":5,"key":"bonjour.","message":"bonjour."}
 `, envTopic, envBrokers)

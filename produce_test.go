@@ -119,7 +119,7 @@ func TestHashCodePartition(t *testing.T) {
 }
 
 func TestProduceParseArgs(t *testing.T) {
-	expectedTopic := "test-topic"
+	expectedTopic := "test-topicInfo"
 	givenBroker := "hans:9092"
 	expectedBrokers := []string{givenBroker}
 	target := &produceCmd{}
@@ -131,7 +131,7 @@ func TestProduceParseArgs(t *testing.T) {
 	if target.topic != expectedTopic ||
 		!reflect.DeepEqual(target.brokers, expectedBrokers) {
 		t.Errorf(
-			"Expected topic %v and brokers %v from env vars, got topic %v and brokers %v.",
+			"Expected topicInfo %v and brokers %v from env vars, got topicInfo %v and brokers %v.",
 			expectedTopic,
 			expectedBrokers,
 			target.topic,
@@ -145,11 +145,11 @@ func TestProduceParseArgs(t *testing.T) {
 	os.Setenv(envBrokers, "")
 	expectedBrokers = []string{"localhost:9092"}
 
-	target.parseArgs([]string{"-topic", expectedTopic})
+	target.parseArgs([]string{"-topicInfo", expectedTopic})
 	if target.topic != expectedTopic ||
 		!reflect.DeepEqual(target.brokers, expectedBrokers) {
 		t.Errorf(
-			"Expected topic %v and brokers %v from env vars, got topic %v and brokers %v.",
+			"Expected topicInfo %v and brokers %v from env vars, got topicInfo %v and brokers %v.",
 			expectedTopic,
 			expectedBrokers,
 			target.topic,
@@ -163,11 +163,11 @@ func TestProduceParseArgs(t *testing.T) {
 	os.Setenv(envBrokers, "BLABB")
 	expectedBrokers = []string{givenBroker}
 
-	target.parseArgs([]string{"-topic", expectedTopic, "-brokers", givenBroker})
+	target.parseArgs([]string{"-topicInfo", expectedTopic, "-brokers", givenBroker})
 	if target.topic != expectedTopic ||
 		!reflect.DeepEqual(target.brokers, expectedBrokers) {
 		t.Errorf(
-			"Expected topic %v and brokers %v from env vars, got topic %v and brokers %v.",
+			"Expected topicInfo %v and brokers %v from env vars, got topicInfo %v and brokers %v.",
 			expectedTopic,
 			expectedBrokers,
 			target.topic,

@@ -66,7 +66,7 @@ func (r *adminCmd) parseArgs(as []string) {
 		if strings.HasPrefix(a.topicConfig, "@") {
 			buf, err = ioutil.ReadFile(a.topicConfig[1:])
 			if err != nil {
-				failf("failed to read topic detail err=%v", err)
+				failf("failed to read topicInfo detail err=%v", err)
 			}
 		} else {
 			buf = []byte(a.topicConfig)
@@ -74,13 +74,13 @@ func (r *adminCmd) parseArgs(as []string) {
 
 		var detail TopicDetail
 		if err = json.Unmarshal(buf, &detail); err != nil {
-			failf("failed to unmarshal topic detail err=%v", err)
+			failf("failed to unmarshal topicInfo detail err=%v", err)
 		}
 		r.topicDetail = detail.ToSaramaTopicDetail()
 	}
 }
 
-// TopicDetail is structure convenient of topic.config  in topic.create.
+// TopicDetail is structure convenient of topicInfo.config  in topicInfo.create.
 type TopicDetail struct {
 	NumPartitions  *int32 `json:"NumPartitions,omitempty"`
 	NumPartitions2 *int32 `json:"numPartitions,omitempty"`
@@ -111,14 +111,13 @@ func (r *TopicDetail) ToSaramaTopicDetail() *sarama.TopicDetail {
 }
 
 func (r *adminCmd) run(args []string) {
-	var err error
-
 	r.parseArgs(args)
 
 	if r.verbose {
 		sarama.Logger = log.New(os.Stderr, "", log.LstdFlags)
 	}
 
+	var err error
 	if r.admin, err = sarama.NewClusterAdmin(r.brokers, r.saramaConfig()); err != nil {
 		failf("failed to create cluster admin err=%v", err)
 	}
@@ -133,22 +132,18 @@ func (r *adminCmd) run(args []string) {
 }
 
 func (r *adminCmd) runCreateTopic() {
-	err := r.admin.CreateTopic(r.topicCreate, r.topicDetail, r.validateOnly)
-	if err != nil {
-		failf("failed to create topic err=%v", err)
+	if err := r.admin.CreateTopic(r.topicCreate, r.topicDetail, r.validateOnly); err != nil {
+		failf("failed to create topicInfo err=%v", err)
 	}
 }
 
 func (r *adminCmd) runDeleteTopic() {
-	err := r.admin.DeleteTopic(r.topicDelete)
-	if err != nil {
-		failf("failed to delete topic err=%v", err)
+	if err := r.admin.DeleteTopic(r.topicDelete); err != nil {
+		failf("failed to delete topicInfo err=%v", err)
 	}
 }
 
 func (r *adminCmd) saramaConfig() *sarama.Config {
-	var err error
-
 	cfg := sarama.NewConfig()
 	cfg.Version = r.version
 	cfg.ClientID = "kt-admin-" + currentUserName()
@@ -157,7 +152,7 @@ func (r *adminCmd) saramaConfig() *sarama.Config {
 		cfg.Admin.Timeout = *r.timeout
 	}
 
-	if err = setupAuth(r.auth, cfg); err != nil {
+	if err := setupAuth(r.auth, cfg); err != nil {
 		failf("failed to setup auth err=%v", err)
 	}
 
@@ -173,10 +168,10 @@ func (r *adminCmd) parseFlags(as []string) adminArgs {
 	f.StringVar(&a.timeout, "timeout", "", "Timeout for request to Kafka (default: 3s)")
 	f.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
 
-	f.StringVar(&a.topicCreate, "topic.create", "", "Name of the topic that should be created.")
-	f.StringVar(&a.topicConfig, "topic.config", "", "Direct JSON string or @file.json of topic detail. cf sarama.TopicDetail")
-	f.BoolVar(&a.validateOnly, "validate.only", false, "Flag to indicate whether operation should only validate input (supported for topic.create).")
-	f.StringVar(&a.topicDelete, "topic.delete", "", "Name of the topic that should be deleted.")
+	f.StringVar(&a.topicCreate, "topicInfo.create", "", "Name of the topicInfo that should be created.")
+	f.StringVar(&a.topicConfig, "topicInfo.config", "", "Direct JSON string or @file.json of topicInfo detail. cf sarama.TopicDetail")
+	f.BoolVar(&a.validateOnly, "validate.only", false, "Flag to indicate whether operation should only validate input (supported for topicInfo.create).")
+	f.StringVar(&a.topicDelete, "topicInfo.delete", "", "Name of the topicInfo that should be deleted.")
 
 	f.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage of admin:")
@@ -198,9 +193,9 @@ var adminDocString = fmt.Sprintf(`
 The value for -brokers can also be set via environment variables %s.
 The value supplied on the command line wins over the environment variable value.
 
-The topic details should be passed via a JSON file that represents a sarama.TopicDetail struct.
+The topicInfo details should be passed via a JSON file that represents a sarama.TopicDetail struct.
 cf https://godoc.org/github.com/Shopify/sarama#TopicDetail
 
 A simple way to pass a JSON file is to use a tool like https://github.com/fgeller/jsonify and shell's process substition:
 
-kt admin -topic.create morenews -topic.config $(jsonify --NumPartitions 1 --ReplicationFactor 1)`, envBrokers)
+kt admin -topicInfo.create morenews -topicInfo.config $(jsonify --NumPartitions 1 --ReplicationFactor 1)`, envBrokers)

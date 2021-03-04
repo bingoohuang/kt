@@ -468,7 +468,7 @@ func TestFindPartitionsToConsume(t *testing.T) {
 				`
 Expected: %#v
 Actual:   %#v
-Input:    topic=%#v offsets=%#v
+Input:    topicInfo=%#v offsets=%#v
 	`,
 				d.expected,
 				actual,
@@ -622,7 +622,7 @@ func (c tConsumer) HighWaterMarks() map[string]map[int32]int64 {
 }
 
 func TestConsumeParseArgs(t *testing.T) {
-	topic := "test-topic"
+	topic := "test-topicInfo"
 	givenBroker := "hans:9092"
 	brokers := []string{givenBroker}
 
@@ -633,7 +633,7 @@ func TestConsumeParseArgs(t *testing.T) {
 	target.parseArgs([]string{})
 	if target.topic != topic ||
 		!reflect.DeepEqual(target.brokers, brokers) {
-		t.Errorf("Expected topic %#v and brokers %#v from env vars, got %#v.", topic, brokers, target)
+		t.Errorf("Expected topicInfo %#v and brokers %#v from env vars, got %#v.", topic, brokers, target)
 		return
 	}
 
@@ -642,10 +642,10 @@ func TestConsumeParseArgs(t *testing.T) {
 	os.Setenv(envBrokers, "")
 	brokers = []string{"localhost:9092"}
 
-	target.parseArgs([]string{"-topic", topic})
+	target.parseArgs([]string{"-topicInfo", topic})
 	if target.topic != topic ||
 		!reflect.DeepEqual(target.brokers, brokers) {
-		t.Errorf("Expected topic %#v and brokers %#v from env vars, got %#v.", topic, brokers, target)
+		t.Errorf("Expected topicInfo %#v and brokers %#v from env vars, got %#v.", topic, brokers, target)
 		return
 	}
 
@@ -654,10 +654,10 @@ func TestConsumeParseArgs(t *testing.T) {
 	os.Setenv(envBrokers, "BLABB")
 	brokers = []string{givenBroker}
 
-	target.parseArgs([]string{"-topic", topic, "-brokers", givenBroker})
+	target.parseArgs([]string{"-topicInfo", topic, "-brokers", givenBroker})
 	if target.topic != topic ||
 		!reflect.DeepEqual(target.brokers, brokers) {
-		t.Errorf("Expected topic %#v and brokers %#v from env vars, got %#v.", topic, brokers, target)
+		t.Errorf("Expected topicInfo %#v and brokers %#v from env vars, got %#v.", topic, brokers, target)
 		return
 	}
 }
