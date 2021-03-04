@@ -41,42 +41,42 @@ type adminArgs struct {
 	topicDelete  string
 }
 
-func (cmd *adminCmd) parseArgs(as []string) {
-	args := cmd.parseFlags(as)
+func (r *adminCmd) parseArgs(as []string) {
+	a := r.parseFlags(as)
 
-	cmd.verbose = args.verbose
-	cmd.version = kafkaVersion(args.version)
-	cmd.timeout = parseTimeout(os.Getenv(envAdminTimeout))
-	if args.timeout != "" {
-		cmd.timeout = parseTimeout(args.timeout)
+	r.verbose = a.verbose
+	r.version = kafkaVersion(a.version)
+	r.timeout = parseTimeout(os.Getenv(envAdminTimeout))
+	if a.timeout != "" {
+		r.timeout = parseTimeout(a.timeout)
 	}
 
-	readAuthFile(args.auth, os.Getenv(envAuth), &cmd.auth)
+	readAuthFile(a.auth, os.Getenv(envAuth), &r.auth)
 
-	cmd.brokers = parseBrokers(args.brokers)
-	cmd.validateOnly = args.validateOnly
-	cmd.topicCreate = args.topicCreate
-	cmd.topicDelete = args.topicDelete
+	r.brokers = parseBrokers(a.brokers)
+	r.validateOnly = a.validateOnly
+	r.topicCreate = a.topicCreate
+	r.topicDelete = a.topicDelete
 
-	if cmd.topicCreate != "" {
+	if r.topicCreate != "" {
 		var (
 			err error
 			buf []byte
 		)
-		if strings.HasPrefix(args.topicConfig, "@") {
-			buf, err = ioutil.ReadFile(args.topicConfig[1:])
+		if strings.HasPrefix(a.topicConfig, "@") {
+			buf, err = ioutil.ReadFile(a.topicConfig[1:])
 			if err != nil {
 				failf("failed to read topic detail err=%v", err)
 			}
 		} else {
-			buf = []byte(args.topicConfig)
+			buf = []byte(a.topicConfig)
 		}
 
 		var detail TopicDetail
 		if err = json.Unmarshal(buf, &detail); err != nil {
 			failf("failed to unmarshal topic detail err=%v", err)
 		}
-		cmd.topicDetail = detail.ToSaramaTopicDetail()
+		r.topicDetail = detail.ToSaramaTopicDetail()
 	}
 }
 
@@ -110,66 +110,66 @@ func (r *TopicDetail) ToSaramaTopicDetail() *sarama.TopicDetail {
 	return d
 }
 
-func (cmd *adminCmd) run(args []string) {
+func (r *adminCmd) run(args []string) {
 	var err error
 
-	cmd.parseArgs(args)
+	r.parseArgs(args)
 
-	if cmd.verbose {
+	if r.verbose {
 		sarama.Logger = log.New(os.Stderr, "", log.LstdFlags)
 	}
 
-	if cmd.admin, err = sarama.NewClusterAdmin(cmd.brokers, cmd.saramaConfig()); err != nil {
+	if r.admin, err = sarama.NewClusterAdmin(r.brokers, r.saramaConfig()); err != nil {
 		failf("failed to create cluster admin err=%v", err)
 	}
 
-	if cmd.topicCreate != "" {
-		cmd.runCreateTopic()
+	if r.topicCreate != "" {
+		r.runCreateTopic()
 	}
 
-	if cmd.topicDelete != "" {
-		cmd.runDeleteTopic()
+	if r.topicDelete != "" {
+		r.runDeleteTopic()
 	}
 }
 
-func (cmd *adminCmd) runCreateTopic() {
-	err := cmd.admin.CreateTopic(cmd.topicCreate, cmd.topicDetail, cmd.validateOnly)
+func (r *adminCmd) runCreateTopic() {
+	err := r.admin.CreateTopic(r.topicCreate, r.topicDetail, r.validateOnly)
 	if err != nil {
 		failf("failed to create topic err=%v", err)
 	}
 }
 
-func (cmd *adminCmd) runDeleteTopic() {
-	err := cmd.admin.DeleteTopic(cmd.topicDelete)
+func (r *adminCmd) runDeleteTopic() {
+	err := r.admin.DeleteTopic(r.topicDelete)
 	if err != nil {
 		failf("failed to delete topic err=%v", err)
 	}
 }
 
-func (cmd *adminCmd) saramaConfig() *sarama.Config {
+func (r *adminCmd) saramaConfig() *sarama.Config {
 	var err error
 
 	cfg := sarama.NewConfig()
-	cfg.Version = cmd.version
+	cfg.Version = r.version
 	cfg.ClientID = "kt-admin-" + currentUserName()
 
-	if cmd.timeout != nil {
-		cfg.Admin.Timeout = *cmd.timeout
+	if r.timeout != nil {
+		cfg.Admin.Timeout = *r.timeout
 	}
 
-	if err = setupAuth(cmd.auth, cfg); err != nil {
+	if err = setupAuth(r.auth, cfg); err != nil {
 		failf("failed to setup auth err=%v", err)
 	}
 
 	return cfg
 }
 
-func (cmd *adminCmd) parseFlags(as []string) adminArgs {
+func (r *adminCmd) parseFlags(as []string) adminArgs {
 	var a adminArgs
 	f := flag.NewFlagSet("consume", flag.ContinueOnError)
 	f.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
 	f.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
-	f.StringVar(&a.version, "version", "", "Kafka protocol version")
+	f.StringVar(&a.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or env %s", envVersion))
 	f.StringVar(&a.timeout, "timeout", "", "Timeout for request to Kafka (default: 3s)")
 	f.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env variable", envAuth))
 

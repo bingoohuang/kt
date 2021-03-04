@@ -51,7 +51,7 @@ func (c *produceCmd) read(as []string) produceArgs {
 	f.BoolVar(&a.verbose, "verbose", false, "Verbose output")
 	f.BoolVar(&a.pretty, "pretty", false, "Control output pretty printing.")
 	f.BoolVar(&a.literal, "literal", false, "Interpret stdin line literally and pass it as value, key as null.")
-	f.StringVar(&a.version, "version", "", "Kafka protocol version, like 0.10.0.0")
+	f.StringVar(&a.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or env %s", envVersion))
 	f.StringVar(&a.compress, "compress", "", "Kafka message compress codec [gzip|snappy|lz4], defaults to none")
 	f.StringVar(&a.partitioner, "partitioner", "hash", "Optional partitioner. hash/rand")
 	f.StringVar(&a.decKey, "dec.key", "string", "Decode message value as (string|hex|base64), defaults to string.")
@@ -273,13 +273,13 @@ func (c *produceCmd) deserializeLines(in chan string, out chan message, partitio
 			}
 		}
 
-		c.setPartition(msg, partitionCount)
+		c.setPartition(&msg, partitionCount)
 
 		out <- msg
 	}
 }
 
-func (c *produceCmd) setPartition(msg message, partitionCount int32) {
+func (c *produceCmd) setPartition(msg *message, partitionCount int32) {
 	if msg.Partition == nil && msg.P != nil {
 		msg.Partition = msg.P
 	}

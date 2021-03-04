@@ -56,7 +56,7 @@ type partition struct {
 	ISRs         []int32 `json:"isrs,omitempty"`
 }
 
-func (c *topicCmd) parseFlags(as []string) topicArgs {
+func (r *topicCmd) parseFlags(as []string) topicArgs {
 	var a topicArgs
 
 	f := flag.NewFlagSet("topic", flag.ContinueOnError)
@@ -69,7 +69,7 @@ func (c *topicCmd) parseFlags(as []string) topicArgs {
 	f.StringVar(&a.filter, "filter", "", "Regex to filter topics by name.")
 	f.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
 	f.BoolVar(&a.pretty, "pretty", true, "Control output pretty printing.")
-	f.StringVar(&a.version, "version", "", "Kafka protocol version")
+	f.StringVar(&a.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or env %s", envVersion))
 	f.Usage = func() {
 		fmt.Fprint(os.Stderr, "Usage of topic:")
 		f.PrintDefaults()
@@ -86,98 +86,95 @@ func (c *topicCmd) parseFlags(as []string) topicArgs {
 	return a
 }
 
-func (c *topicCmd) parseArgs(as []string) {
-	var (
-		err error
-		re  *regexp.Regexp
+func (r *topicCmd) parseArgs(as []string) {
+	var err error
+	var re *regexp.Regexp
 
-		args = c.parseFlags(as)
-	)
+	a := r.parseFlags(as)
+	r.brokers = parseBrokers(a.brokers)
 
-	c.brokers = parseBrokers(args.brokers)
-
-	if re, err = regexp.Compile(args.filter); err != nil {
+	if re, err = regexp.Compile(a.filter); err != nil {
 		failf("invalid regex for filter err=%s", err)
 	}
 
-	readAuthFile(args.auth, os.Getenv(envAuth), &c.auth)
+	readAuthFile(a.auth, os.Getenv(envAuth), &r.auth)
 
-	c.filter = re
-	c.partitions = args.partitions
-	c.leaders = args.leaders
-	c.replicas = args.replicas
-	c.config = args.config
-	c.pretty = args.pretty
-	c.verbose = args.verbose
-	c.version = kafkaVersion(args.version)
+	r.filter = re
+	r.partitions = a.partitions
+	r.leaders = a.leaders
+	r.replicas = a.replicas
+	r.config = a.config
+	r.pretty = a.pretty
+	r.verbose = a.verbose
+	r.version = kafkaVersion(a.version)
 }
 
-func (c *topicCmd) connect() {
+func (r *topicCmd) connect() {
 	var err error
 
 	cfg := sarama.NewConfig()
-	cfg.Version = c.version
+	cfg.Version = r.version
 	cfg.ClientID = "kt-topic-" + currentUserName()
-	if c.verbose {
+	if r.verbose {
 		log.Printf("sarama client configuration %#v\n", cfg)
 	}
 
-	if err := setupAuth(c.auth, cfg); err != nil {
+	if err := setupAuth(r.auth, cfg); err != nil {
 		log.Printf("Failed to setupAuth err=%v", err)
 	}
 
-	if c.client, err = sarama.NewClient(c.brokers, cfg); err != nil {
+	if r.client, err = sarama.NewClient(r.brokers, cfg); err != nil {
 		failf("failed to create client err=%v", err)
 	}
-	if c.admin, err = sarama.NewClusterAdmin(c.brokers, cfg); err != nil {
+	if r.admin, err = sarama.NewClusterAdmin(r.brokers, cfg); err != nil {
 		failf("failed to create cluster admin err=%v", err)
 	}
 }
 
-func (c *topicCmd) run(as []string) {
-	c.parseArgs(as)
-	if c.verbose {
+func (r *topicCmd) run(as []string) {
+	r.parseArgs(as)
+	if r.verbose {
 		sarama.Logger = log.New(os.Stderr, "", log.LstdFlags)
 	}
 
-	c.connect()
-	defer c.client.Close()
-	defer c.admin.Close()
+	r.connect()
+	defer r.client.Close()
+	defer r.admin.Close()
 
 	var all []string
 	var err error
-	if all, err = c.client.Topics(); err != nil {
+	if all, err = r.client.Topics(); err != nil {
 		failf("failed to read topics err=%v", err)
 	}
 
 	var topics []string
 	for _, a := range all {
-		if c.filter.MatchString(a) {
+		if r.filter.MatchString(a) {
 			topics = append(topics, a)
 		}
 	}
 
 	out := make(chan printContext)
-	go print(out, c.pretty)
+	go print(out, r.pretty)
 
 	var wg sync.WaitGroup
 	for _, tn := range topics {
 		wg.Add(1)
 		go func(top string) {
-			c.print(top, out)
+			r.print(top, out)
 			wg.Done()
 		}(tn)
 	}
 	wg.Wait()
 }
 
-func (c *topicCmd) print(name string, out chan printContext) {
+func (r *topicCmd) print(name string, out chan printContext) {
 	var (
 		top topic
 		err error
 	)
 
-	if top, err = c.readTopic(name); err != nil {
+	if top, err = r.readTopic(name); err != nil {
 		log.Printf("failed to read info for topic %s. err=%v", name, err)
 		return
 	}
@@ -187,7 +184,7 @@ func (c *topicCmd) print(name string, out chan printContext) {
 	<-ctx.done
 }
 
-func (c *topicCmd) readTopic(name string) (topic, error) {
+func (r *topicCmd) readTopic(name string) (topic, error) {
 	var (
 		err           error
 		ps            []int32
@@ -196,10 +193,10 @@ func (c *topicCmd) readTopic(name string) (topic, error) {
 		configEntries []sarama.ConfigEntry
 	)
 
-	if c.config {
+	if r.config {
 
 		resource := sarama.ConfigResource{Name: name, Type: sarama.TopicResource}
-		if configEntries, err = c.admin.DescribeConfig(resource); err != nil {
+		if configEntries, err = r.admin.DescribeConfig(resource); err != nil {
 			return top, err
 		}
 
@@ -209,38 +206,38 @@ func (c *topicCmd) readTopic(name string) (topic, error) {
 		}
 	}
 
-	if !c.partitions {
+	if !r.partitions {
 		return top, nil
 	}
 
-	if ps, err = c.client.Partitions(name); err != nil {
+	if ps, err = r.client.Partitions(name); err != nil {
 		return top, err
 	}
 
 	for _, p := range ps {
 		np := partition{ID: p}
 
-		if np.OldestOffset, err = c.client.GetOffset(name, p, sarama.OffsetOldest); err != nil {
+		if np.OldestOffset, err = r.client.GetOffset(name, p, sarama.OffsetOldest); err != nil {
 			return top, err
 		}
 
-		if np.NewestOffset, err = c.client.GetOffset(name, p, sarama.OffsetNewest); err != nil {
+		if np.NewestOffset, err = r.client.GetOffset(name, p, sarama.OffsetNewest); err != nil {
 			return top, err
 		}
 
-		if c.leaders {
-			if led, err = c.client.Leader(name, p); err != nil {
+		if r.leaders {
+			if led, err = r.client.Leader(name, p); err != nil {
 				return top, err
 			}
 			np.Leader = led.Addr()
 		}
 
-		if c.replicas {
-			if np.Replicas, err = c.client.Replicas(name, p); err != nil {
+		if r.replicas {
+			if np.Replicas, err = r.client.Replicas(name, p); err != nil {
 				return top, err
 			}
 
-			if np.ISRs, err = c.client.InSyncReplicas(name, p); err != nil {
+			if np.ISRs, err = r.client.InSyncReplicas(name, p); err != nil {
 				return top, err
 			}
 		}

@@ -48,9 +48,7 @@ func (c *cmd) run(name string, args ...string) (int, string, string) {
 }
 
 func build(t *testing.T) {
-	var status int
-
-	status, _, _ = newCmd().run("go", "build")
+	status, _, _ := newCmd().run("go", "build")
 	require.Zero(t, status)
 
 	status, _, _ = newCmd().run("ls", "kt")
@@ -64,9 +62,7 @@ func TestSystem(t *testing.T) {
 	var status int
 	var stdOut, stdErr string
 
-	//
-	// kt admin -createtopic
-	//
+	// kt admin topic.create
 	topicName := fmt.Sprintf("kt-test-%v", randomString(6))
 	topicDetail := &sarama.TopicDetail{
 		NumPartitions:     1,
@@ -79,20 +75,14 @@ func TestSystem(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(fnTopicDetail)
 
-	status, stdOut, stdErr = newCmd().
-		stdIn(string(buf)).
-		run("./kt", "admin",
-			"-createtopic", topicName,
-			"-topicdetail", fnTopicDetail)
-	fmt.Printf(">> system test kt admin -createtopic %v stdout:\n%s\n", topicName, stdOut)
-	fmt.Printf(">> system test kt admin -createtopic %v stderr:\n%s\n", topicName, stdErr)
+	status, stdOut, stdErr = newCmd().stdIn(string(buf)).run("./kt", "admin", "-topic.create", topicName, "-topic.config", "@"+fnTopicDetail)
+	fmt.Printf(">> system test kt admin -topic.create %v stdout:\n%s\n", topicName, stdOut)
+	fmt.Printf(">> system test kt admin -topic.create %v stderr:\n%s\n", topicName, stdErr)
 	require.Zero(t, status)
 	require.Empty(t, stdErr)
 
 	fmt.Printf(">> ✓\n")
-	//
 	// kt produce
-	//
 
 	req := map[string]interface{}{
 		"value":     fmt.Sprintf("hello, %s", randomString(6)),
@@ -101,9 +91,7 @@ func TestSystem(t *testing.T) {
 	}
 	buf, err = json.Marshal(req)
 	require.NoError(t, err)
-	status, stdOut, stdErr = newCmd().stdIn(string(buf)).
-		run("./kt", "produce",
-			"-topic", topicName)
+	status, stdOut, stdErr = newCmd().stdIn(string(buf)).run("./kt", "produce", "-topic", topicName)
 	fmt.Printf(">> system test kt produce -topic %v stdout:\n%s\n", topicName, stdOut)
 	fmt.Printf(">> system test kt produce -topic %v stderr:\n%s\n", topicName, stdErr)
 	require.Zero(t, status)
@@ -117,15 +105,9 @@ func TestSystem(t *testing.T) {
 	require.Equal(t, 0, produceMessage["startOffset"])
 
 	fmt.Printf(">> ✓\n")
-	//
-	// kt consume
-	//
 
-	status, stdOut, stdErr = newCmd().
-		run("./kt", "consume",
-			"-topic", topicName,
-			"-timeout", "500ms",
-			"-group", "hans")
+	// kt consume
+	status, stdOut, stdErr = newCmd().run("./kt", "consume", "-topic", topicName, "-timeout", "500ms", "-group", "hans")
 	fmt.Printf(">> system test kt consume -topic %v stdout:\n%s\n", topicName, stdOut)
 	fmt.Printf(">> system test kt consume -topic %v stderr:\n%s\n", topicName, stdErr)
 	require.Zero(t, status)
@@ -145,13 +127,9 @@ func TestSystem(t *testing.T) {
 	require.True(t, pt.After(time.Now().Add(-2*time.Minute)))
 
 	fmt.Printf(">> ✓\n")
-	//
-	// kt group
-	//
 
-	status, stdOut, stdErr = newCmd().
-		run("./kt", "group",
-			"-topic", topicName)
+	// kt group
+	status, stdOut, stdErr = newCmd().run("./kt", "group", "-topic", topicName)
 	fmt.Printf(">> system test kt group -topic %v stdout:\n%s\n", topicName, stdOut)
 	fmt.Printf(">> system test kt group -topic %v stderr:\n%s\n", topicName, stdErr)
 	require.Zero(t, status)
@@ -159,10 +137,8 @@ func TestSystem(t *testing.T) {
 	require.Contains(t, stdOut, fmt.Sprintf(`{"name":"hans","topic":"%v","offsets":[{"partition":0,"offset":1,"lag":0}]}`, topicName))
 
 	fmt.Printf(">> ✓\n")
-	//
-	// kt produce
-	//
 
+	// kt produce
 	req = map[string]interface{}{
 		"value":     fmt.Sprintf("hello, %s", randomString(6)),
 		"key":       "boom",
@@ -170,9 +146,7 @@ func TestSystem(t *testing.T) {
 	}
 	buf, err = json.Marshal(req)
 	require.NoError(t, err)
-	status, stdOut, stdErr = newCmd().stdIn(string(buf)).
-		run("./kt", "produce",
-			"-topic", topicName)
+	status, stdOut, stdErr = newCmd().stdIn(string(buf)).run("./kt", "produce", "-topic", topicName)
 	fmt.Printf(">> system test kt produce -topic %v stdout:\n%s\n", topicName, stdOut)
 	fmt.Printf(">> system test kt produce -topic %v stderr:\n%s\n", topicName, stdErr)
 	require.Zero(t, status)
@@ -185,16 +159,9 @@ func TestSystem(t *testing.T) {
 	require.Equal(t, 1, produceMessage["startOffset"])
 
 	fmt.Printf(">> ✓\n")
-	//
-	// kt consume
-	//
 
-	status, stdOut, stdErr = newCmd().
-		run("./kt", "consume",
-			"-topic", topicName,
-			"-offsets", "all=resume",
-			"-timeout", "500ms",
-			"-group", "hans")
+	// kt consume
+	status, stdOut, stdErr = newCmd().run("./kt", "consume", "-topic", topicName, "-offsets", "all=resume", "-timeout", "500ms", "-group", "hans")
 	fmt.Printf(">> system test kt consume -topic %v -offsets all=resume stdout:\n%s\n", topicName, stdOut)
 	fmt.Printf(">> system test kt consume -topic %v -offsets all=resume stderr:\n%s\n", topicName, stdErr)
 	require.Zero(t, status)
@@ -213,16 +180,9 @@ func TestSystem(t *testing.T) {
 	require.True(t, pt.After(time.Now().Add(-2*time.Minute)))
 
 	fmt.Printf(">> ✓\n")
-	//
-	// kt group reset
-	//
 
-	status, stdOut, stdErr = newCmd().
-		run("./kt", "group",
-			"-topic", topicName,
-			"-partitions", "0",
-			"-group", "hans",
-			"-reset", "0")
+	// kt group reset
+	status, stdOut, stdErr = newCmd().run("./kt", "group", "-topic", topicName, "-partitions", "0", "-group", "hans", "-reset", "0")
 	fmt.Printf(">> system test kt group -topic %v -partitions 0 -group hans -reset 0 stdout:\n%s\n", topicName, stdOut)
 	fmt.Printf(">> system test kt group -topic %v -partitions 0 -group hans -reset 0  stderr:\n%s\n", topicName, stdErr)
 	require.Zero(t, status)
@@ -242,13 +202,9 @@ func TestSystem(t *testing.T) {
 	require.Equal(t, offsets["offset"], float64(0))
 
 	fmt.Printf(">> ✓\n")
-	//
-	// kt group
-	//
 
-	status, stdOut, stdErr = newCmd().
-		run("./kt", "group",
-			"-topic", topicName)
+	// kt group
+	status, stdOut, stdErr = newCmd().run("./kt", "group", "-topic", topicName)
 	fmt.Printf(">> system test kt group -topic %v stdout:\n%s\n", topicName, stdOut)
 	fmt.Printf(">> system test kt group -topic %v stderr:\n%s\n", topicName, stdErr)
 	require.Zero(t, status)
@@ -256,13 +212,9 @@ func TestSystem(t *testing.T) {
 	require.Contains(t, stdOut, fmt.Sprintf(`{"name":"hans","topic":"%v","offsets":[{"partition":0,"offset":0,"lag":2}]}`, topicName))
 
 	fmt.Printf(">> ✓\n")
-	//
-	// kt topic
-	//
 
-	status, stdOut, stdErr = newCmd().
-		run("./kt", "topic",
-			"-filter", topicName)
+	// kt topic
+	status, stdOut, stdErr = newCmd().run("./kt", "topic", "-filter", topicName)
 	fmt.Printf(">> system test kt topic stdout:\n%s\n", stdOut)
 	fmt.Printf(">> system test kt topic stderr:\n%s\n", stdErr)
 	require.Zero(t, status)
@@ -285,26 +237,17 @@ func TestSystem(t *testing.T) {
 	}
 	fmt.Printf(">> ✓\n")
 
-	//
-	// kt admin -deletetopic
-	//
-	status, stdOut, stdErr = newCmd().stdIn(string(buf)).
-		run("./kt", "admin",
-			"-deletetopic", topicName)
-	fmt.Printf(">> system test kt admin -deletetopic %v stdout:\n%s\n", topicName, stdOut)
-	fmt.Printf(">> system test kt admin -deletetopic %v stderr:\n%s\n", topicName, stdErr)
+	// kt admin -topic.delete
+	status, stdOut, stdErr = newCmd().stdIn(string(buf)).run("./kt", "admin", "-topic.delete", topicName)
+	fmt.Printf(">> system test kt admin -topic.delete %v stdout:\n%s\n", topicName, stdOut)
+	fmt.Printf(">> system test kt admin -topic.delete %v stderr:\n%s\n", topicName, stdErr)
 	require.Zero(t, status)
 	require.Empty(t, stdErr)
 
 	fmt.Printf(">> ✓\n")
 
-	//
 	// kt topic
-	//
-
-	status, stdOut, stdErr = newCmd().
-		run("./kt", "topic",
-			"-filter", topicName)
+	status, stdOut, stdErr = newCmd().run("./kt", "topic", "-filter", topicName)
 	fmt.Printf(">> system test kt topic stdout:\n%s\n", stdOut)
 	fmt.Printf(">> system test kt topic stderr:\n%s\n", stdErr)
 	require.Zero(t, status)

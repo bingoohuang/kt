@@ -435,7 +435,7 @@ func (cmd *groupCmd) parseFlags(as []string) groupArgs {
 	f.StringVar(&a.reset, "reset", "", "Target offset to reset for consumer group (newest, oldest, or specific offset)")
 	f.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
 	f.BoolVar(&a.pretty, "pretty", false, "Control output pretty printing.")
-	f.StringVar(&a.version, "version", "", "Kafka protocol version")
+	f.StringVar(&a.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or env %s", envVersion))
 	f.StringVar(&a.partitions, "partitions", allPartitionsHuman, "comma separated list of partitions to limit offsets to, or all")
 	f.BoolVar(&a.offsets, "offsets", true, "Controls if offsets should be fetched (defauls to true)")
 

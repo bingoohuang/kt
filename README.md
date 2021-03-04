@@ -187,12 +187,12 @@ found 1 topics
 <details><summary>Create and delete a topic</summary>
 
 ```sh
-$ kt admin -createtopic morenews -topicdetail <(jsonify =NumPartitions 1 =ReplicationFactor 1)
+$ kt admin -topic.create morenews -topic.config $(jsonify =NumPartitions 1 =ReplicationFactor 1)
 $ kt topic -filter news
 {
   "name": "morenews"
 }
-$ kt admin -deletetopic morenews
+$ kt admin -topic.delete morenews
 $ kt topic -filter news
 ```
 

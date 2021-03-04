@@ -27,6 +27,7 @@ import (
 
 const (
 	envAuth         = "KT_AUTH"
+	envVersion      = "KT_VERSION"
 	envAdminTimeout = "KT_ADMIN_TIMEOUT"
 	envBrokers      = "KT_BROKERS"
 	envTopic        = "KT_TOPIC"
@@ -79,6 +80,10 @@ func listenForInterrupt(q chan struct{}) {
 }
 
 func kafkaVersion(s string) sarama.KafkaVersion {
+	if s == "" {
+		s = os.Getenv(envVersion)
+	}
+
 	if s == "" {
 		return sarama.V2_0_0_0
 	}
