@@ -160,7 +160,7 @@ func (r *adminCmd) saramaConfig() *sarama.Config {
 
 func (r *adminCmd) parseFlags(as []string) adminArgs {
 	var a adminArgs
-	f := flag.NewFlagSet("consume", flag.ContinueOnError)
+	f := flag.NewFlagSet("admin", flag.ContinueOnError)
 	f.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
 	f.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
 	f.StringVar(&a.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or env %s", EnvVersion))

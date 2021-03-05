@@ -32,7 +32,7 @@ type produceArgs struct {
 	bufSize     int
 }
 
-type message struct {
+type Message struct {
 	Key       *string `json:"key,omitempty"`
 	Value     *string `json:"value,omitempty"`
 	K         *string `json:"k,omitempty"`
@@ -224,8 +224,8 @@ func (c *produceCmd) run(as []string) {
 	c.findLeaders()
 	stdin := make(chan string)
 	lines := make(chan string)
-	messages := make(chan message)
-	batchedMessages := make(chan []message)
+	messages := make(chan Message)
+	batchedMessages := make(chan []Message)
 	c.out = make(chan PrintContext)
 	q := make(chan struct{})
 
@@ -261,10 +261,10 @@ func (c *produceCmd) close() {
 	}
 }
 
-func (c *produceCmd) deserializeLines(in chan string, out chan message, partitionCount int32) {
+func (c *produceCmd) deserializeLines(in chan string, out chan Message, partitionCount int32) {
 	defer func() { close(out) }()
 	for l := range in {
-		var msg message
+		var msg Message
 
 		switch {
 		case c.literal:
@@ -279,7 +279,7 @@ func (c *produceCmd) deserializeLines(in chan string, out chan message, partitio
 				if len(l) == 0 {
 					v = nil
 				}
-				msg = message{Value: v}
+				msg = Message{Value: v}
 			}
 		}
 
@@ -289,7 +289,7 @@ func (c *produceCmd) deserializeLines(in chan string, out chan message, partitio
 	}
 }
 
-func (c *produceCmd) setPartition(msg *message, partitionCount int32) {
+func (c *produceCmd) setPartition(msg *Message, partitionCount int32) {
 	if msg.Partition == nil && msg.P != nil {
 		msg.Partition = msg.P
 	}
@@ -309,10 +309,10 @@ func (c *produceCmd) setPartition(msg *message, partitionCount int32) {
 	msg.Partition = &part
 }
 
-func (c *produceCmd) batchRecords(in chan message, out chan []message) {
+func (c *produceCmd) batchRecords(in chan Message, out chan []Message) {
 	defer func() { close(out) }()
 
-	var messages []message
+	var messages []Message
 	send := func() {
 		out <- messages
 		messages = messages[:0]
@@ -343,7 +343,7 @@ type partitionProduceResult struct {
 	count int64
 }
 
-func (c *produceCmd) makeSaramaMessage(msg message) (*sarama.Message, error) {
+func (c *produceCmd) makeSaramaMessage(msg Message) (*sarama.Message, error) {
 	var (
 		err error
 		sm  = &sarama.Message{Codec: c.compress}
@@ -369,7 +369,7 @@ func (c *produceCmd) makeSaramaMessage(msg message) (*sarama.Message, error) {
 	return sm, nil
 }
 
-func (c *produceCmd) produceBatch(leaders map[int32]*sarama.Broker, batch []message) error {
+func (c *produceCmd) produceBatch(leaders map[int32]*sarama.Broker, batch []Message) error {
 	requests := map[*sarama.Broker]*sarama.ProduceRequest{}
 	for _, msg := range batch {
 		broker, ok := leaders[*msg.Partition]
@@ -430,7 +430,7 @@ func readPartitionOffsetResults(resp *sarama.ProduceResponse) (map[int32]partiti
 	return offsets, nil
 }
 
-func (c *produceCmd) produce(in chan []message) {
+func (c *produceCmd) produce(in chan []Message) {
 	for b := range in {
 		if err := c.produceBatch(c.leaders, b); err != nil {
 			log.Printf("produce batch error %v", err.Error())

@@ -178,7 +178,7 @@ func TestProduceParseArgs(t *testing.T) {
 	}
 }
 
-func newMessage(key, value string, partition int32) message {
+func newMessage(key, value string, partition int32) Message {
 	var k *string
 	if key != "" {
 		k = &key
@@ -189,7 +189,7 @@ func newMessage(key, value string, partition int32) message {
 		v = &value
 	}
 
-	return message{
+	return Message{
 		Key:       k,
 		Value:     v,
 		Partition: &partition,
@@ -200,7 +200,7 @@ func TestMakeSaramaMessage(t *testing.T) {
 	decoder, _ := ParseStringDecoder("string")
 	target := &produceCmd{keyDecoder: decoder, valDecoder: decoder}
 	key, value := "key", "value"
-	msg := message{Key: &key, Value: &value}
+	msg := Message{Key: &key, Value: &value}
 	actual, err := target.makeSaramaMessage(msg)
 	require.Nil(t, err)
 	require.Equal(t, []byte(key), actual.Key)
@@ -209,7 +209,7 @@ func TestMakeSaramaMessage(t *testing.T) {
 	decoder, _ = ParseStringDecoder("hex")
 	target.keyDecoder, target.valDecoder = decoder, decoder
 	key, value = "41", "42"
-	msg = message{Key: &key, Value: &value}
+	msg = Message{Key: &key, Value: &value}
 	actual, err = target.makeSaramaMessage(msg)
 	require.Nil(t, err)
 	require.Equal(t, []byte("A"), actual.Key)
@@ -218,7 +218,7 @@ func TestMakeSaramaMessage(t *testing.T) {
 	decoder, _ = ParseStringDecoder("base64")
 	target.keyDecoder, target.valDecoder = decoder, decoder
 	key, value = "aGFucw==", "cGV0ZXI="
-	msg = message{Key: &key, Value: &value}
+	msg = Message{Key: &key, Value: &value}
 	actual, err = target.makeSaramaMessage(msg)
 	require.Nil(t, err)
 	require.Equal(t, []byte("hans"), actual.Key)
@@ -233,7 +233,7 @@ func TestDeserializeLines(t *testing.T) {
 		literal        bool
 		partition      int32
 		partitionCount int32
-		expected       message
+		expected       Message
 	}{
 		{
 			in:             "",
@@ -270,7 +270,7 @@ func TestDeserializeLines(t *testing.T) {
 
 	for _, d := range data {
 		in := make(chan string, 1)
-		out := make(chan message)
+		out := make(chan Message)
 		target.literal = d.literal
 		target.partition = d.partition
 		go target.deserializeLines(in, out, d.partitionCount)
