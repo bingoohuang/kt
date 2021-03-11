@@ -7,7 +7,6 @@ default: install
 
 tool:
 	go get github.com/securego/gosec/cmd/gosec
-	go get github.com/bingoohuang/pkger/cmd/pkger@master
 
 sec:
 	@gosec ./...

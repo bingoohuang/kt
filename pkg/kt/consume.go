@@ -328,19 +328,19 @@ func (p PrintMessageConsumer) Consume(m *sarama.ConsumerMessage) {
 }
 
 type consumedMessage struct {
-	Partition int32      `json:"partition"`
-	Offset    int64      `json:"offset"`
-	Key       string     `json:"key,omitempty"`
-	Value     string     `json:"value,omitempty"`
-	Timestamp *time.Time `json:"timestamp,omitempty"`
+	Partition int32           `json:"partition"`
+	Offset    int64           `json:"offset"`
+	Key       string          `json:"key,omitempty"`
+	Value     json.RawMessage `json:"value,omitempty"`
+	Timestamp *time.Time      `json:"timestamp,omitempty"`
 }
 
-func newConsumedMessage(m *sarama.ConsumerMessage, keyEncoder, valEncoder BytesEncoder) consumedMessage {
+func newConsumedMessage(m *sarama.ConsumerMessage, keyEnc, valEnc BytesEncoder) consumedMessage {
 	result := consumedMessage{
 		Partition: m.Partition,
 		Offset:    m.Offset,
-		Key:       encodeBytes(m.Key, keyEncoder),
-		Value:     encodeBytes(m.Value, valEncoder),
+		Key:       encodeBytes(m.Key, keyEnc),
+		Value:     []byte(encodeBytes(m.Value, valEnc)),
 	}
 
 	if !m.Timestamp.IsZero() {

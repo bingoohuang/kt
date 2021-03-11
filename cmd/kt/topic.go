@@ -71,7 +71,7 @@ func (r *topicCmd) parseFlags(as []string) topicArgs {
 	f.BoolVar(&a.config, "config", false, "Include topic configuration.")
 	f.StringVar(&a.filter, "filter", "", "Regex to filter topics by name.")
 	f.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
-	f.BoolVar(&a.pretty, "pretty", true, "Control Output pretty printing.")
+	f.BoolVar(&a.pretty, "pretty", false, "Control Output pretty printing.")
 	f.StringVar(&a.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or env %s", EnvVersion))
 	f.Usage = func() {
 		fmt.Fprint(os.Stderr, "Usage of topic:")
