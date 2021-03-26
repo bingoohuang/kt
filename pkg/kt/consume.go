@@ -324,7 +324,11 @@ func (p PrintMessageConsumer) Consume(m *sarama.ConsumerMessage) {
 		log.Printf("failed to marshal Output %#v, err=%v", msg, err)
 	}
 
-	fmt.Println(string(buf))
+	fmt.Printf("topic:%s offset:%d partition:%d key:%s timestamp:%s msg:%s\n",
+		m.Topic, m.Offset, m.Partition, m.Key,
+		m.Timestamp.Format("2006-01-02 15:04:05.000"),
+		string(buf),
+	)
 }
 
 type consumedMessage struct {

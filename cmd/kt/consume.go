@@ -81,7 +81,6 @@ func (c *consumeCmd) parseArgs(as []string) {
 	}
 
 	conf.MessageConsumer = NewPrintMessageConsumer(a.pretty, keyEncoder, valEncoder)
-
 	c.conf = conf
 }
 
@@ -141,28 +140,15 @@ The following syntax is supported for each Offset:
  - Given only a numeric value, it is interpreted as an absolute Offset value.
 
 More examples:
- - To consume messages from partition 0 between offsets 10 and 20 (inclusive).
-     0=10:20
- - To define an OffsetInterval for all partitions use -1 as the partition identifier:
-     all=2:10
- - You can also override the offsets for a single partition, in this case 2:
-     all=1-10,2=5-10
- - To consume from multiple partitions:
-     0=4:,2=1:10,6
- - This would consume messages from three partitions:
-     - Anything from partition 0 starting at Offset 4.
-     - Messages between offsets 1 and 10 from partition 2.
-     - Anything from partition 6.
- - To Start at the latest Offset for each partition:
-     all=newest:
- - Or shorter:
-     newest:
- - To consume the last 10 messages:
-     newest-10
- - To skip the first 15 messages starting with the oldest Offset:
-     oldest+10
- - In both cases you can omit "newest" and "oldest":
-     -10
- - and
-     +10
+ - 0=10:20       To consume messages from partition 0 between offsets 10 and 20 (inclusive).
+ - all=2:10      To define an OffsetInterval for all partitions use -1 as the partition identifier:
+ - all=1-5,2=5-7 Override the offsets for a single partition, in this case 2:
+ - 0=4:,2=1:10,6 To consume from multiple partitions:
+ - This would consume messages from three partitions: p=0 offset>=4,  p=2 1<=offsets<=10, p=6 all offsets.
+ - all=newest    To Start at the latest Offset for each partition
+ - newest        Shorter of above
+ - newest-10     To consume the last 10 messages
+ - -10           Omit "newest", same with above
+ - oldest+10     To skip the first 15 messages starting with the oldest Offset
+ - +10           Omit "oldest",, same with above
 `, EnvTopic, EnvBrokers)
