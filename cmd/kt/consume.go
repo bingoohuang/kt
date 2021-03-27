@@ -25,17 +25,10 @@ func (c *consumeCmd) run(args []string) {
 }
 
 type consumeArgs struct {
-	topic   string
-	brokers string
-	auth    string
-	timeout time.Duration
-	offsets string
-	verbose bool
-	version string
-	encVal  string
-	encKey  string
-	pretty  bool
-	group   string
+	topic, brokers, auth, version  string
+	offsets, group, encKey, encVal string
+	timeout                        time.Duration
+	verbose, pretty                bool
 }
 
 func failStartup(msg string) {
@@ -45,34 +38,27 @@ func failStartup(msg string) {
 
 func (c *consumeCmd) parseArgs(as []string) {
 	a := c.parseFlags(as)
-
 	if a.verbose {
 		sarama.Logger = log.New(os.Stderr, "", log.LstdFlags)
 	}
 
 	conf := ConsumerConfig{
 		Brokers: ParseBrokers(a.brokers),
-		Timeout: a.timeout,
-		Group:   a.group,
-		Offsets: a.offsets,
+		Timeout: a.timeout, Group: a.group, Offsets: a.offsets,
 	}
 
 	var err error
-
 	if conf.Topic, err = ParseTopic(a.topic); err != nil {
 		failStartup(err.Error())
 	}
-
 	if conf.Version, err = ParseKafkaVersion(a.version); err != nil {
 		failStartup(err.Error())
 	}
-
 	if err = conf.Auth.ReadConfigFile(a.auth); err != nil {
 		failStartup(err.Error())
 	}
 
 	var valEncoder, keyEncoder BytesEncoder
-
 	if valEncoder, err = ParseBytesEncoder(a.encVal); err != nil {
 		failStartup(err.Error())
 	}
@@ -88,13 +74,13 @@ func (c *consumeCmd) parseFlags(as []string) consumeArgs {
 	var a consumeArgs
 	f := flag.NewFlagSet("consume", flag.ContinueOnError)
 	f.StringVar(&a.topic, "topic", "", "Topic to consume (required).")
-	f.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
-	f.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, can also be set via %s env", EnvAuth))
-	f.StringVar(&a.offsets, "offsets", "newest", "Specifies what messages to read by partition and Offset range (defaults to newest).")
-	f.DurationVar(&a.timeout, "timeout", time.Duration(0), "Timeout after not reading messages (default 0 to disable).")
+	f.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port set to 9092 when omitted (defaults to localhost:9092).")
+	f.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, or by env %s", EnvAuth))
+	f.StringVar(&a.offsets, "offsets", "newest", "Specifies what messages to read by partition and offset range (defaults to newest).")
+	f.DurationVar(&a.timeout, "timeout", 0, "Timeout after not reading messages (default 0 to disable).")
 	f.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
 	f.BoolVar(&a.pretty, "pretty", false, "Control Output pretty printing.")
-	f.StringVar(&a.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or env %s", EnvVersion))
+	f.StringVar(&a.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or by env %s", EnvVersion))
 	f.StringVar(&a.encVal, "enc.value", "string", "Present message value as string|hex|base64, defaults to string.")
 	f.StringVar(&a.encKey, "enc.key", "string", "Present message key as string|hex|base64, defaults to string.")
 	f.StringVar(&a.group, "group", "", "Consumer group to use for marking offsets. kt will mark offsets if this arg is supplied.")
@@ -116,29 +102,25 @@ func (c *consumeCmd) parseFlags(as []string) consumeArgs {
 }
 
 var consumeDocString = fmt.Sprintf(`
-The values for -topic and -brokers can also be set via environment variables %s and %s respectively.
-The values supplied on the command line win over environment variable values.
-
+The values for -topic and -brokers can also be set via env variables %s and %s respectively.
+The values supplied on the command line win over env variable values.
 Offsets can be specified as a comma-separated list of intervals:
   [[partition=Start:End],...]
-
 The default is to consume from the oldest Offset on every partition for the given topic.
  - partition is the numeric identifier for a partition. You can use "all" to
    specify a default OffsetInterval for all partitions.
  - Start is the included Offset where consumption should Start.
  - End is the included Offset where consumption should End.
-
 The following syntax is supported for each Offset:
   (oldest|newest|resume)?(+|-)?(\d+)?
  - "oldest" and "newest" refer to the oldest and newest offsets known for a given partition.
  - "resume" can be used in combination with -group.
- - You can use "+" with a numeric value to skip the given number of messages since the oldest Offset. 
+ - Use "+" with a numeric value to skip the given number of messages since the oldest Offset. 
    For example, "1=+20" will skip 20 Offset value since the oldest Offset for partition 1.
- - You can use "-" with a numeric value to refer to only the given number of messages before the newest Offset. 
+ - Use "-" with a numeric value to refer to only the given number of messages before the newest Offset. 
    For example, "1=-10" will refer to the last 10 Offset values before the newest Offset for partition 1.
  - Relative offsets are based on numeric values and will not take skipped offsets (e.g. due to compaction) into account.
  - Given only a numeric value, it is interpreted as an absolute Offset value.
-
 More examples:
  - 0=10:20       To consume messages from partition 0 between offsets 10 and 20 (inclusive).
  - all=2:10      To define an OffsetInterval for all partitions use -1 as the partition identifier:
