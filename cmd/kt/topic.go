@@ -76,7 +76,10 @@ func (r *topicCmd) parseFlags(as []string) topicArgs {
 	f.Usage = func() {
 		fmt.Fprint(os.Stderr, "Usage of topic:")
 		f.PrintDefaults()
-		fmt.Fprint(os.Stderr, topicDocString)
+		fmt.Fprint(os.Stderr, fmt.Sprintf(`
+The values for -brokers can also be set via the environment variable %s respectively.
+The values supplied on the command line win over environment variable values.
+`, EnvBrokers))
 	}
 
 	err := f.Parse(as)
@@ -242,7 +245,3 @@ func (r *topicCmd) readTopic(name string) (topicInfo, error) {
 
 	return top, nil
 }
-
-var topicDocString = fmt.Sprintf(`
-The values for -brokers can also be set via the environment variable %s respectively.
-The values supplied on the command line win over environment variable values.`, EnvBrokers)
