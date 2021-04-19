@@ -3,6 +3,7 @@ package kt
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/bingoohuang/gg/pkg/gz"
 	"log"
 	"sync"
 	"syscall"
@@ -332,11 +333,12 @@ func (p PrintMessageConsumer) Consume(m *sarama.ConsumerMessage) {
 }
 
 type consumedMessage struct {
-	Partition int32           `json:"partition"`
-	Offset    int64           `json:"offset"`
-	Key       string          `json:"key,omitempty"`
-	Value     json.RawMessage `json:"value,omitempty"`
-	Timestamp *time.Time      `json:"timestamp,omitempty"`
+	Partition int32             `json:"partition"`
+	Offset    int64             `json:"offset"`
+	Key       string            `json:"key,omitempty"`
+	Value     json.RawMessage   `json:"value,omitempty"`
+	Timestamp *time.Time        `json:"timestamp,omitempty"`
+	Headers   map[string]string `json:"headers,omitempty"`
 }
 
 func newConsumedMessage(m *sarama.ConsumerMessage, keyEnc, valEnc BytesEncoder) consumedMessage {
@@ -349,6 +351,17 @@ func newConsumedMessage(m *sarama.ConsumerMessage, keyEnc, valEnc BytesEncoder) 
 
 	if !m.Timestamp.IsZero() {
 		result.Timestamp = &m.Timestamp
+	}
+
+	result.Headers = make(map[string]string)
+	for _, h := range m.Headers {
+		result.Headers[string(h.Key)] = string(h.Value)
+	}
+	const Gzipped = "gzipped"
+	if result.Headers[Gzipped] == "true" {
+		if v, err := gz.Ungzip(m.Value); err == nil {
+			result.Value = []byte(encodeBytes(v, valEnc))
+		}
 	}
 
 	return result
