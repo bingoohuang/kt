@@ -3,7 +3,6 @@ package kt
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bingoohuang/gg/pkg/gz"
 	"log"
 	"sync"
 	"syscall"
@@ -356,12 +355,6 @@ func newConsumedMessage(m *sarama.ConsumerMessage, keyEnc, valEnc BytesEncoder) 
 	result.Headers = make(map[string]string)
 	for _, h := range m.Headers {
 		result.Headers[string(h.Key)] = string(h.Value)
-	}
-	const Gzipped = "gzipped"
-	if result.Headers[Gzipped] == "true" {
-		if v, err := gz.Ungzip(m.Value); err == nil {
-			result.Value = []byte(encodeBytes(v, valEnc))
-		}
 	}
 
 	return result
