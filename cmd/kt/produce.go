@@ -114,7 +114,7 @@ func kafkaCompression(codecName string) sarama.CompressionCodec {
 		return sarama.CompressionSnappy
 	case "lz4":
 		return sarama.CompressionLZ4
-	case "":
+	case "none", "":
 		return sarama.CompressionNone
 	}
 
@@ -264,6 +264,7 @@ func (c *produceCmd) close() {
 func (c *produceCmd) deserializeLines(in chan string, out chan Message, partitionCount int32) {
 	defer func() { close(out) }()
 	for l := range in {
+		l := l
 		var msg Message
 
 		switch {
@@ -356,7 +357,9 @@ func (c *produceCmd) makeSaramaMessage(msg Message) (*sarama.Message, error) {
 	}
 
 	if v := FirstNotNil(msg.Value, msg.V); v != "" {
-		if sm.Value, err = c.valDecoder.Decode(v); err != nil {
+		if data, ok := readFile(v); ok {
+			sm.Value = data
+		} else if sm.Value, err = c.valDecoder.Decode(v); err != nil {
 			return sm, fmt.Errorf("failed to decode value as string, err=%v", err)
 		}
 	}
@@ -367,6 +370,19 @@ func (c *produceCmd) makeSaramaMessage(msg Message) (*sarama.Message, error) {
 	}
 
 	return sm, nil
+}
+
+func readFile(v string) ([]byte, bool) {
+	if !strings.HasPrefix(v, "@") {
+		return nil, false
+	}
+
+	data, err := os.ReadFile(v[1:])
+	if err != nil {
+		return nil, false
+	}
+
+	return data, true
 }
 
 func (c *produceCmd) produceBatch(leaders map[int32]*sarama.Broker, batch []Message) error {
