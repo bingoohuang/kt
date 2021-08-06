@@ -321,10 +321,10 @@ func (p PrintMessageConsumer) Consume(m *sarama.ConsumerMessage) {
 	msg := newConsumedMessage(m, p.KeyEncoder, p.ValEncoder)
 	buf, err := p.Marshal(msg)
 	if err != nil {
-		log.Printf("failed to marshal Output %#v, err=%v", msg, err)
+		buf = []byte(msg.Value)
 	}
 
-	fmt.Printf("topic:%s offset:%d partition:%d key:%s timestamp:%s msg:%s\n",
+	fmt.Printf("topic: %s offset: %d partition: %d key: %s timestamp: %s msg: %s\n",
 		m.Topic, m.Offset, m.Partition, m.Key,
 		m.Timestamp.Format("2006-01-02 15:04:05.000"),
 		string(buf),
@@ -335,7 +335,7 @@ type consumedMessage struct {
 	Partition int32             `json:"partition"`
 	Offset    int64             `json:"offset"`
 	Key       string            `json:"key,omitempty"`
-	Value     json.RawMessage   `json:"value,omitempty"`
+	Value     string            `json:"value,omitempty"`
 	Timestamp *time.Time        `json:"timestamp,omitempty"`
 	Headers   map[string]string `json:"headers,omitempty"`
 }
@@ -345,7 +345,7 @@ func newConsumedMessage(m *sarama.ConsumerMessage, keyEnc, valEnc BytesEncoder) 
 		Partition: m.Partition,
 		Offset:    m.Offset,
 		Key:       encodeBytes(m.Key, keyEnc),
-		Value:     []byte(encodeBytes(m.Value, valEnc)),
+		Value:     encodeBytes(m.Value, valEnc),
 	}
 
 	if !m.Timestamp.IsZero() {
