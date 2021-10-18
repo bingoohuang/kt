@@ -6,7 +6,7 @@ Some reasons why you might be interested:
 * Display topic information (e.g., with partition offset and leader info).
 * Modify consumer group offsets (e.g., resetting or manually setting offsets per topic and per partition).
 * JSON output for easy consumption with tools like [kp](https://github.com/echojc/kp) or [jq](https://stedolan.github.io/jq/).
-* JSON input to facilitate automation via tools like [jsonify](https://github.com/bingoohuang/jsonify).
+* JSON input to facilitate automation via tools like [jsonify](https://github.com/fgeller/jsonify).
 * Configure brokers, topic and authentication via environment variables `KT_BROKERS`, `KT_TOPIC` and `KT_AUTH`.
 * Fast start up time.
 * No buffering of output.
@@ -292,6 +292,8 @@ Example:
 
 ### Other modes
 
-Please create an
-[issue](https://github.com/fgeller/kt/issues/new) with details for the mode that you need.
+Please create an [issue](https://github.com/bingoohuang/kt/issues/new) with details for the mode that you need.
 
+### handy scripts
+
+1. `kt consume -brokers 192.168.18.14:9092 -topic metrics -version 0.10.0.0`

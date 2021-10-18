@@ -1,10 +1,11 @@
 package main
 
 import (
+	"time"
+
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill-kafka/v2/pkg/kafka"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"time"
 )
 
 func pub() {

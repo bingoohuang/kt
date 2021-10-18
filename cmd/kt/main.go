@@ -4,33 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/bingoohuang/gg/pkg/v"
 	. "github.com/bingoohuang/kt/pkg/kt"
 )
-
-const appVersion = "v13.0.0+"
-
-var buildVersion, buildTime string
-
-var versionMessage = fmt.Sprintf(`kt version %s`, appVersion)
-
-func init() {
-	if buildVersion == "" && buildTime == "" {
-		return
-	}
-
-	versionMessage += " ("
-	if buildVersion != "" {
-		versionMessage += buildVersion
-	}
-
-	if buildTime != "" {
-		if buildVersion != "" {
-			versionMessage += " @ "
-		}
-		versionMessage += buildTime
-	}
-	versionMessage += ")"
-}
 
 var usageMessage = fmt.Sprintf(`kt is a tool for Kafka.
 Usage:
@@ -51,8 +27,8 @@ Authentication with Kafka can be configured via a JSON file.
 You can set the file name via an "-auth" flag to each command or
 set it via the environment variable %s.
 
-You can find more details at https://github.com/fgeller/kt
-%s`, EnvAuth, versionMessage)
+You can find more details at https://github.com/bingoohuang/kt
+`, EnvAuth)
 
 func parseArgs() command {
 	if len(os.Args) < 2 {
@@ -73,7 +49,7 @@ func parseArgs() command {
 	case "-h", "-help", "--help":
 		quitf(usageMessage)
 	case "-version", "--version":
-		quitf(versionMessage)
+		quitf(v.Version())
 	default:
 		failf(usageMessage)
 	}

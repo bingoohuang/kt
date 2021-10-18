@@ -1,13 +1,14 @@
 package main
 
 import (
+	"context"
+	"log"
+
 	"github.com/Shopify/sarama"
 	"github.com/ThreeDotsLabs/watermill"
 
-	"context"
 	"github.com/ThreeDotsLabs/watermill-kafka/v2/pkg/kafka"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"log"
 )
 
 func sub() {
