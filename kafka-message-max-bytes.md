@@ -143,7 +143,8 @@ kafka配置参数有很多，可以做到高度自定义。但是很多用户拿
 
 ### broker端的配置
 
-`message.max.bytes`，默认是1M。决定了broker可以接受多大的数据。如果采用默认配置，producer生产1M以上的数据都会被broker丢掉。
+`message.max.bytes`，默认是1M。[如果启用了压缩，则是压缩后的消息大小](https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/config/TopicConfig.java#L94)。
+决定了broker可以接受多大的数据。如果采用默认配置，producer生产1M以上的数据都会被broker丢掉。
 所以这个参数需要设置为单条消息的最大大小。和这个参数相关的还有一个topic级别的 `max.message.bytes`，其实它和 `message.max.bytes` 是一个功能，
 只是针对topic的设置，只对单个topic有作用，不会影响到其他topic（其他topic仍然使用message.max.bytes）。
 
