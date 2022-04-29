@@ -3,6 +3,7 @@ package kt
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/bingoohuang/jj"
 	"log"
 	"sync"
 	"syscall"
@@ -321,7 +322,14 @@ func (p PrintMessageConsumer) Consume(m *sarama.ConsumerMessage) {
 	msg := newConsumedMessage(m, p.KeyEncoder, p.ValEncoder)
 	buf, err := p.Marshal(msg)
 	if err != nil {
-		buf = []byte(msg.Value)
+		switch mv := msg.Value.(type) {
+		case string:
+			buf = []byte(mv)
+		case json.RawMessage:
+			buf = mv
+		default:
+			buf = []byte(fmt.Sprintf("%+v", msg.Value))
+		}
 	}
 
 	fmt.Printf("topic: %s offset: %d partition: %d key: %s timestamp: %s msg: %s\n",
@@ -335,7 +343,7 @@ type consumedMessage struct {
 	Partition int32             `json:"partition"`
 	Offset    int64             `json:"offset"`
 	Key       string            `json:"key,omitempty"`
-	Value     string            `json:"value,omitempty"`
+	Value     interface{}       `json:"value,omitempty"`
 	Timestamp *time.Time        `json:"timestamp,omitempty"`
 	Headers   map[string]string `json:"headers,omitempty"`
 }
@@ -345,7 +353,13 @@ func newConsumedMessage(m *sarama.ConsumerMessage, keyEnc, valEnc BytesEncoder) 
 		Partition: m.Partition,
 		Offset:    m.Offset,
 		Key:       encodeBytes(m.Key, keyEnc),
-		Value:     encodeBytes(m.Value, valEnc),
+	}
+
+	value := encodeBytes(m.Value, valEnc)
+	if jj.Parse(value).IsJSON() {
+		result.Value = json.RawMessage(value)
+	} else {
+		result.Value = value
 	}
 
 	if !m.Timestamp.IsZero() {

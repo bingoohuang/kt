@@ -36,7 +36,7 @@ func parseArgs() command {
 	}
 
 	switch os.Args[1] {
-	case "consume":
+	case "consume", "tail":
 		return &consumeCmd{}
 	case "produce":
 		return &produceCmd{}
