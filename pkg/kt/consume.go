@@ -3,8 +3,10 @@ package kt
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/bingoohuang/gg/pkg/jsoni"
 	"github.com/bingoohuang/jj"
 	"log"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -302,9 +304,10 @@ type ConsumedMessage struct {
 type PrintMessageConsumer struct {
 	Marshal                func(v interface{}) ([]byte, error)
 	ValEncoder, KeyEncoder BytesEncoder
+	sseSender              *SSESender
 }
 
-func NewPrintMessageConsumer(pretty bool, keyEncoder, valEncoder BytesEncoder) *PrintMessageConsumer {
+func NewPrintMessageConsumer(pretty bool, keyEncoder, valEncoder BytesEncoder, sseSender *SSESender) *PrintMessageConsumer {
 	marshal := json.Marshal
 
 	if pretty && terminal.IsTerminal(syscall.Stdout) {
@@ -315,6 +318,7 @@ func NewPrintMessageConsumer(pretty bool, keyEncoder, valEncoder BytesEncoder) *
 		Marshal:    marshal,
 		KeyEncoder: keyEncoder,
 		ValEncoder: valEncoder,
+		sseSender:  sseSender,
 	}
 }
 
@@ -337,6 +341,27 @@ func (p PrintMessageConsumer) Consume(m *sarama.ConsumerMessage) {
 		m.Timestamp.Format("2006-01-02 15:04:05.000"),
 		string(buf),
 	)
+
+	if p.sseSender != nil {
+		e, _ := jsoni.MarshalToString(sseBean{
+			Topic:     m.Topic,
+			Offset:    strconv.FormatInt(m.Offset, 10),
+			Partition: strconv.FormatInt(int64(m.Partition), 10),
+			Key:       string(m.Key),
+			Timestamp: m.Timestamp.Format("2006-01-02 15:04:05.000"),
+			Message:   string(buf),
+		})
+		p.sseSender.Send(e)
+	}
+}
+
+type sseBean struct {
+	Topic     string
+	Offset    string
+	Partition string
+	Key       string
+	Timestamp string
+	Message   string
 }
 
 type consumedMessage struct {

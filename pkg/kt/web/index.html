@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>kt tail</title>
+    <style>
+        pre {
+            white-space: pre-wrap; /* Since CSS 2.1 */
+            white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+            white-space: -o-pre-wrap; /* Opera 7 */
+            word-wrap: break-word; /* Internet Explorer 5.5+ */
+        }
+    </style>
+</head>
+
+<body>
+<div id="log"></div>
+</body>
+<script type="text/javascript">
+    function pad2(n) {
+        return n < 10 ? '0' + n : n
+    }
+
+    function now() {
+        const d = new Date();
+        return d.getFullYear().toString() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate())
+            + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds())
+            + '.' + ('00' + d.getMilliseconds()).slice(-3);
+    }
+
+    // type sseBean struct {
+    // Topic     string
+    // Offset    string
+    // Partition string
+    // Key       string
+    // Timestamp string
+    // Message   string
+    // }
+    // helper function: log message to screen
+    function log(j) {
+        let pre = document.createElement('pre');
+        msg = now() + '\n\n'
+            + 'Topic:     ' + j.Topic + '\n'
+            + 'Offset:    ' + j.Offset + '\n'
+            + 'Partition: ' + j.Partition + '\n'
+            + 'Key:       ' + j.Key + '\n'
+            + 'Timestamp: ' + j.Timestamp + '\n'
+            + 'Message:\n\n' + j.Message + '\n\n'
+        pre.textContent = msg;
+        pre.style.color = 'red';
+        let log = document.getElementById('log');
+        log.prepend(pre)
+
+        if (log.children.length > 100) {
+            log.removeChild(log.lastChild);
+        }
+
+        setTimeout(function () {
+            pre.style.color = 'black';
+        }, 10000)
+    }
+
+    const source = new EventSource("{{.ContextPath}}/sse");
+    source.onmessage = function (e) {
+        let j = JSON.parse(e.data)
+        log(j)
+    }
+    source.onerror = function (err) {
+        console.warn(err)
+    };
+    source.onclose = function (err) {
+        console.info("closed", err)
+    };
+
+</script>
+
+</html>

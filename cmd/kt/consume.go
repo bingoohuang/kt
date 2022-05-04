@@ -3,8 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/bingoohuang/gg/pkg/netx/freeport"
+	"github.com/bingoohuang/gg/pkg/osx"
 	"log"
+	"net/http"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -14,7 +18,8 @@ import (
 )
 
 type consumeCmd struct {
-	conf ConsumerConfig
+	conf      ConsumerConfig
+	sseSender *SSESender
 }
 
 func (c *consumeCmd) run(args []string) {
@@ -29,6 +34,10 @@ type consumeArgs struct {
 	offsets, group, encKey, encVal string
 	timeout                        time.Duration
 	verbose, pretty                bool
+
+	web        bool
+	webPort    int
+	webContext string
 }
 
 func failStartup(msg string) {
@@ -66,25 +75,27 @@ func (c *consumeCmd) parseArgs(as []string) {
 		failStartup(err.Error())
 	}
 
-	conf.MessageConsumer = NewPrintMessageConsumer(a.pretty, keyEncoder, valEncoder)
+	conf.MessageConsumer = NewPrintMessageConsumer(a.pretty, keyEncoder, valEncoder, c.sseSender)
 	c.conf = conf
 }
 
 func (c *consumeCmd) parseFlags(as []string) consumeArgs {
 	var a consumeArgs
 	f := flag.NewFlagSet("consume", flag.ContinueOnError)
-	f.StringVar(&a.topic, "topic", "", "Topic to consume (required).")
-	f.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port set to 9092 when omitted (defaults to localhost:9092).")
+	f.StringVar(&a.topic, "topic", "", "Topic to consume (required)")
+	f.StringVar(&a.brokers, "brokers", "", "Comma separated list of brokers. Port set to 9092 when omitted (defaults to localhost:9092)")
 	f.StringVar(&a.auth, "auth", "", fmt.Sprintf("Path to auth configuration file, or by env %s", EnvAuth))
-	f.StringVar(&a.offsets, "offsets", "newest", "Specifies what messages to read by partition and offset range (defaults to newest).")
-	f.DurationVar(&a.timeout, "timeout", 0, "Timeout after not reading messages (default 0 to disable).")
-	f.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr.")
-	f.BoolVar(&a.pretty, "pretty", false, "Control Output pretty printing.")
+	f.StringVar(&a.offsets, "offsets", "newest", "Specifies what messages to read by partition and offset range (defaults to newest)")
+	f.DurationVar(&a.timeout, "timeout", 0, "Timeout after not reading messages (default 0 to disable)")
+	f.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr")
+	f.BoolVar(&a.pretty, "pretty", false, "Control Output pretty printing")
 	f.StringVar(&a.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or by env %s", EnvVersion))
-	f.StringVar(&a.encVal, "enc.value", "string", "Present message value as string|hex|base64, defaults to string.")
-	f.StringVar(&a.encKey, "enc.key", "string", "Present message key as string|hex|base64, defaults to string.")
-	f.StringVar(&a.group, "group", "", "Consumer group to use for marking offsets. kt will mark offsets if this arg is supplied.")
-
+	f.StringVar(&a.encVal, "enc.value", "string", "Present message value as string|hex|base64, defaults to string")
+	f.StringVar(&a.encKey, "enc.key", "string", "Present message key as string|hex|base64, defaults to string")
+	f.StringVar(&a.group, "group", "", "Consumer group to use for marking offsets. kt will mark offsets if this arg is supplied")
+	f.BoolVar(&a.web, "web", false, `Start web server for HTTP requests and responses event`)
+	f.IntVar(&a.webPort, "webport", 0, `Web server port if web is enable`)
+	f.StringVar(&a.webContext, "webcontext", "", `Web server context path if web is enable`)
 	f.Usage = func() {
 		fmt.Fprint(os.Stderr, "Usage of consume:")
 		f.PrintDefaults()
@@ -98,7 +109,38 @@ func (c *consumeCmd) parseFlags(as []string) consumeArgs {
 		os.Exit(2)
 	}
 
+	c.parseWeb(&a)
+
 	return a
+}
+
+func (c *consumeCmd) parseWeb(a *consumeArgs) {
+	if !a.web {
+		return
+	}
+
+	var port int
+	if a.webPort > 0 {
+		port = freeport.PortStart(a.webPort)
+	} else {
+		port = freeport.Port()
+	}
+
+	stream := NewSSEStream()
+	c.sseSender = &SSESender{Stream: stream}
+	contextPath := path.Join("/", a.webContext)
+	log.Printf("contextPath: %s", contextPath)
+
+	http.Handle("/", http.HandlerFunc(SSEWebHandler(contextPath, stream)))
+	log.Printf("start to listen on %d", port)
+	go func() {
+		addr := fmt.Sprintf(":%d", port)
+		if err := http.ListenAndServe(addr, nil); err != nil {
+			log.Printf("listen and serve failed: %v", err)
+		}
+	}()
+
+	go osx.OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d%s", port, contextPath))
 }
 
 var consumeDocString = fmt.Sprintf(`

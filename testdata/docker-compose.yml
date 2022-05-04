@@ -1,0 +1,18 @@
+version: '3.7'
+services:
+  kafka:
+    image: landoop/fast-data-dev:2.5.1
+    ports:
+      - "9092:9092"
+      - "8081:8081"
+      - "8082:8082"
+      - "8083:8083"
+      - "2181:2181"
+      - "3030:3030" # UI: http://localhost:3030/
+      - "9581-9585:9581-9585"
+    environment:
+      - ADV_HOST=localhost # Use your 'docker-machine ip' or 'localhost' if linux
+
+
+
+# docker-compose up && docker-compose rm -fsv
