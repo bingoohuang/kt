@@ -349,7 +349,7 @@ func (p PrintMessageConsumer) Consume(m *sarama.ConsumerMessage) {
 			Partition: strconv.FormatInt(int64(m.Partition), 10),
 			Key:       string(m.Key),
 			Timestamp: m.Timestamp.Format("2006-01-02 15:04:05.000"),
-			Message:   string(buf),
+			Message:   jj.GetBytes(buf, "value").Raw,
 		})
 		p.sseSender.Send(e)
 	}
