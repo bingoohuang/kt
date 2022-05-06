@@ -46,8 +46,12 @@
             + 'Topic:     ' + j.Topic + '\n'
             + 'Offset:    ' + j.Offset + '\n'
             + 'Partition: ' + j.Partition + '\n'
-            + 'Key:       ' + j.Key + '\n'
-            + 'Timestamp: ' + j.Timestamp + '\n'
+
+        if (j.Key) {
+            msg += 'Key:       ' + j.Key + '\n'
+        }
+
+        msg += 'Timestamp: ' + j.Timestamp + '\n'
             + 'Message:   👇 (' + j.MessageSize + ')\n\n' + j.Message + '\n\n'
         pre.textContent = msg;
         pre.style.color = 'red';
