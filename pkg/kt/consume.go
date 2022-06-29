@@ -3,14 +3,15 @@ package kt
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bingoohuang/gg/pkg/jsoni"
-	"github.com/bingoohuang/gg/pkg/man"
-	"github.com/bingoohuang/jj"
 	"log"
 	"strconv"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/bingoohuang/gg/pkg/jsoni"
+	"github.com/bingoohuang/gg/pkg/man"
+	"github.com/bingoohuang/jj"
 
 	"github.com/Shopify/sarama"
 	"golang.org/x/crypto/ssh/terminal"
@@ -311,7 +312,7 @@ type PrintMessageConsumer struct {
 func NewPrintMessageConsumer(pretty bool, keyEncoder, valEncoder BytesEncoder, sseSender *SSESender) *PrintMessageConsumer {
 	marshal := json.Marshal
 
-	if pretty && terminal.IsTerminal(syscall.Stdout) {
+	if pretty && terminal.IsTerminal(syscall.Stdin) {
 		marshal = func(i interface{}) ([]byte, error) { return json.MarshalIndent(i, "", "  ") }
 	}
 
@@ -337,9 +338,10 @@ func (p PrintMessageConsumer) Consume(m *sarama.ConsumerMessage) {
 		}
 	}
 
-	fmt.Printf("topic: %s offset: %d partition: %d key: %s timestamp: %s msg: %s\n",
+	fmt.Printf("topic: %s offset: %d partition: %d key: %s timestamp: %s valueSize: %s msg: %s\n",
 		m.Topic, m.Offset, m.Partition, m.Key,
 		m.Timestamp.Format("2006-01-02 15:04:05.000"),
+		man.Bytes(uint64(len(m.Value))),
 		string(buf),
 	)
 
