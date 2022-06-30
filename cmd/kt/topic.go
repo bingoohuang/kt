@@ -74,7 +74,7 @@ func (r *topicCmd) parseFlags(as []string) topicArgs {
 	f.BoolVar(&a.pretty, "pretty", false, "Control Output pretty printing.")
 	f.StringVar(&a.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or env %s", EnvVersion))
 	f.Usage = func() {
-		fmt.Fprint(os.Stderr, "Usage of topic:")
+		fmt.Fprintln(os.Stderr, "Usage of topic:")
 		f.PrintDefaults()
 		fmt.Fprint(os.Stderr, fmt.Sprintf(`
 The values for -brokers can also be set via the environment variable %s respectively.

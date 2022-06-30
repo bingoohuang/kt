@@ -98,7 +98,7 @@ func (c *consumeCmd) parseFlags(as []string) consumeArgs {
 	f.IntVar(&a.webPort, "webport", 0, `Web server port if web is enable`)
 	f.StringVar(&a.webContext, "webcontext", "", `Web server context path if web is enable`)
 	f.Usage = func() {
-		fmt.Fprint(os.Stderr, "Usage of consume:")
+		fmt.Fprintln(os.Stderr, "Usage of consume:")
 		f.PrintDefaults()
 		fmt.Fprint(os.Stderr, consumeDocString)
 	}

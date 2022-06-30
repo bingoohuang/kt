@@ -418,7 +418,7 @@ func (c *groupCmd) parseFlags(as []string) groupArgs {
 	f.BoolVar(&a.offsets, "offsets", true, "Controls if offsets should be fetched (defauls to true)")
 
 	f.Usage = func() {
-		fmt.Fprint(os.Stderr, "Usage of group:")
+		fmt.Fprintln(os.Stderr, "Usage of group:")
 		f.PrintDefaults()
 		fmt.Fprint(os.Stderr, groupDocString)
 	}

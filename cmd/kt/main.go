@@ -13,11 +13,13 @@ Usage:
 	kt command [arguments]
 
 The commands are:
-	consume    consume messages.
-	produce    produce messages.
-	topic      topic information.
-	group      consumer group information and modification.
-	admin      basic cluster administration.
+	consume      consume messages.
+	produce      produce messages.
+	kiss-consume KISS consume messages.
+	kiss-produce KISS produce messages.
+	topic        topic information.
+	group        consumer group information and modification.
+	admin        basic cluster administration.
 
 Use "kt [command] -help" for more information about the command.
 Use "kt -version" for details on what version you are running.
@@ -36,19 +38,29 @@ func parseArgs() command {
 	}
 
 	switch os.Args[1] {
-	case "consume", "tail":
+	case "consume", "consumer", "tail":
 		return &consumeCmd{}
-	case "produce":
+	case "console-consume", "console-consumer", "console-tail":
+		return &consoleConsumerCmd{}
+	case "console-produce", "console-producer":
+		return &consoleProducerCmd{}
+	case "produce", "producer":
 		return &produceCmd{}
+	case "perf-produce", "perf-producer":
+		return &perfProduceCmd{}
 	case "topic":
 		return &topicCmd{}
 	case "group":
 		return &groupCmd{}
+	case "kiss-consume", "kiss-consumer":
+		return &kissConsumer{}
+	case "kiss-produce", "kiss-producer":
+		return &kissProducer{}
 	case "admin":
 		return &adminCmd{}
 	case "-h", "-help", "--help":
 		quitf(usageMessage)
-	case "-version", "--version":
+	case "-version", "--version", "version", "-v", "--v", "v":
 		quitf(v.Version())
 	default:
 		failf(usageMessage)

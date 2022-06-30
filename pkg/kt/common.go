@@ -10,8 +10,10 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/bingoohuang/gg/pkg/man"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -24,8 +26,10 @@ const (
 )
 
 type PrintContext struct {
-	Output interface{}
-	Done   chan struct{}
+	Output     interface{}
+	Done       chan struct{}
+	MessageNum int
+	ValueSize  int
 }
 
 func ParseBrokers(argBrokers string) []string {
@@ -77,20 +81,39 @@ func ParseKafkaVersion(s string) (sarama.KafkaVersion, error) {
 }
 
 func PrintOut(in <-chan PrintContext, pretty bool) {
+	PrintOutStats(in, pretty, false)
+}
+
+func PrintOutStats(in <-chan PrintContext, pretty, stats bool) {
 	marshal := json.Marshal
 
 	if pretty && terminal.IsTerminal(syscall.Stdout) {
 		marshal = func(i interface{}) ([]byte, error) { return json.MarshalIndent(i, "", "  ") }
 	}
 
-	for {
-		ctx := <-in
-		buf, err := marshal(ctx.Output)
-		if err != nil {
-			log.Printf("failed to marshal Output %#v, err=%v", ctx.Output, err)
-		}
+	messageNum := 0
+	valueSize := 0
+	start := time.Now()
+	defer func() {
+		cost := time.Since(start)
+		fmt.Printf("total messages %d, size %s, cost: %s, TPS: %f message/s %s/s\n",
+			messageNum, man.Bytes(uint64(valueSize)), cost,
+			float64(messageNum)/float64(cost.Seconds()),
+			man.Bytes(uint64(float64(valueSize)/float64(cost.Seconds()))))
+	}()
 
-		fmt.Println(string(buf))
+	for ctx := range in {
+		messageNum += ctx.MessageNum
+		valueSize += ctx.ValueSize
+
+		if !stats {
+			buf, err := marshal(ctx.Output)
+			if err != nil {
+				log.Printf("failed to marshal Output %#v, err=%v", ctx.Output, err)
+			}
+
+			fmt.Println(string(buf))
+		}
 		close(ctx.Done)
 	}
 }

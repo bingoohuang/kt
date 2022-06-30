@@ -312,7 +312,7 @@ type PrintMessageConsumer struct {
 func NewPrintMessageConsumer(pretty bool, keyEncoder, valEncoder BytesEncoder, sseSender *SSESender) *PrintMessageConsumer {
 	marshal := json.Marshal
 
-	if pretty && terminal.IsTerminal(syscall.Stdin) {
+	if pretty && terminal.IsTerminal(syscall.Stdout) {
 		marshal = func(i interface{}) ([]byte, error) { return json.MarshalIndent(i, "", "  ") }
 	}
 
