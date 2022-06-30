@@ -42,7 +42,7 @@ type perfProduceCmd struct {
 	throughput        int
 	maxOpenRequests   int
 	maxMessageBytes   int
-	requiredAcks      int
+	requiredAcks      string
 	timeout           time.Duration
 	partitioner       string
 	compression       string
@@ -66,7 +66,7 @@ func (p *perfProduceCmd) run(args []string) {
 	c := sarama.NewConfig()
 	c.Net.MaxOpenRequests = p.maxOpenRequests
 	c.Producer.MaxMessageBytes = p.maxMessageBytes
-	c.Producer.RequiredAcks = sarama.RequiredAcks(p.requiredAcks)
+	c.Producer.RequiredAcks = ParseRequiredAcks(p.requiredAcks)
 	c.Producer.Timeout = p.timeout
 	c.Producer.Partitioner = parsePartitioner(p.partitioner, p.partition)
 	c.Producer.Compression = parseCompression(p.compression)
@@ -79,29 +79,7 @@ func (p *perfProduceCmd) run(args []string) {
 	c.ChannelBufferSize = p.channelBufferSize
 	c.Version = parseVersion(p.version)
 
-	if p.securityProtocol == "SSL" {
-		tlsConfig, err := tls.NewConfig(p.tlsClientCert, p.tlsClientKey)
-		if err != nil {
-			printErrorAndExit(69, "failed to load client certificate from: %s and private key from: %s: %v",
-				p.tlsClientCert, p.tlsClientKey, err)
-		}
-
-		if p.tlsRootCACerts != "" {
-			rootCAsBytes, err := os.ReadFile(p.tlsRootCACerts)
-			if err != nil {
-				printErrorAndExit(69, "failed to read root CA certificates: %v", err)
-			}
-			certPool := x509.NewCertPool()
-			if !certPool.AppendCertsFromPEM(rootCAsBytes) {
-				printErrorAndExit(69, "failed to load root CA certificates from file: %s", p.tlsRootCACerts)
-			}
-			// Use specific root CA set vs the host's set
-			tlsConfig.RootCAs = certPool
-		}
-
-		c.Net.TLS.Enable = true
-		c.Net.TLS.Config = tlsConfig
-	}
+	p.setupSSL(c)
 
 	if err := c.Validate(); err != nil {
 		printErrorAndExit(69, "Invalid configuration: %s", err)
@@ -135,6 +113,34 @@ func (p *perfProduceCmd) run(args []string) {
 
 	// Print final metrics.
 	p.printMetrics(os.Stdout, c.MetricRegistry)
+}
+
+func (p *perfProduceCmd) setupSSL(c *sarama.Config) {
+	if p.securityProtocol != "SSL" {
+		return
+	}
+
+	tlsConfig, err := tls.NewConfig(p.tlsClientCert, p.tlsClientKey)
+	if err != nil {
+		printErrorAndExit(69, "failed to load client certificate from: %s and private key from: %s: %v",
+			p.tlsClientCert, p.tlsClientKey, err)
+	}
+
+	if p.tlsRootCACerts != "" {
+		rootCAsBytes, err := os.ReadFile(p.tlsRootCACerts)
+		if err != nil {
+			printErrorAndExit(69, "failed to read root CA certificates: %v", err)
+		}
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(rootCAsBytes) {
+			printErrorAndExit(69, "failed to load root CA certificates from file: %s", p.tlsRootCACerts)
+		}
+		// Use specific root CA set vs the host's set
+		tlsConfig.RootCAs = certPool
+	}
+
+	c.Net.TLS.Enable = true
+	c.Net.TLS.Config = tlsConfig
 }
 
 func (p *perfProduceCmd) runAsyncProducer(c *sarama.Config, brokers []string) {
@@ -288,7 +294,7 @@ func (p *perfProduceCmd) parseArgs(args []string) {
 	f := fla9.NewFlagSet("perf-produce", fla9.ContinueOnError)
 	f.BoolVar(&p.sync, "sync", false, "Use a synchronous producer.")
 	f.BoolVar(&p.messageBinary, "msg-binary", false, "Use a random binary message content or ascii message.")
-	f.IntVar(&p.messageLoad, "msg-load", 50000, "REQUIRED: The number of messages to produce to -topic.")
+	f.IntVar(&p.messageLoad, "msg-load,n", 50000, "REQUIRED: The number of messages to produce to -topic.")
 	f.IntVar(&p.messageSize, "msg-size", 100, "REQUIRED: The approximate size (in bytes) of each message to produce to -topic.")
 	f.StringVar(&p.brokers, "brokers", "127.0.0.1:9092", "REQUIRED: A comma separated list of broker addresses.")
 	f.StringVar(&p.securityProtocol, "security-protocol", "PLAINTEXT", "The name of the security protocol to talk to Kafka (PLAINTEXT, SSL) (default: PLAINTEXT).")
@@ -300,7 +306,7 @@ func (p *perfProduceCmd) parseArgs(args []string) {
 	f.IntVar(&p.throughput, "throughput", 0, "The maximum number of messages to send per second (0 for no limit).")
 	f.IntVar(&p.maxOpenRequests, "max-open-requests", 5, "The maximum number of unacknowledged requests the client will send on a single connection before blocking (default: 5).")
 	f.IntVar(&p.maxMessageBytes, "max-msg-bytes", 1000000, "The max permitted size of a message.")
-	f.IntVar(&p.requiredAcks, "required-acks", 1, "The required number of acks needed from the broker (-1: all, 0: none, 1: local).")
+	f.StringVar(&p.requiredAcks, "required-acks", "local", "The required number of acks needed from the broker (all,none, local).")
 	f.DurationVar(&p.timeout, "timeout", 10*time.Second, "The duration the producer will wait to receive -required-acks.")
 	f.StringVar(&p.partitioner, "partitioner", "roundrobin", "The partitioning scheme to use (hash, manual, random, roundrobin).")
 	f.StringVar(&p.compression, "compression", "none", "The compression method to use (none, gzip, snappy, lz4).")

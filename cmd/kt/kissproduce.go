@@ -35,41 +35,13 @@ type kissProducer struct {
 // https://github.com/Shopify/sarama/blob/main/tools/kafka-producer-performance/main.go
 
 func (p *kissProducer) run(args []string) {
-	f := fla9.NewFlagSet("kiss-produce", fla9.ContinueOnError)
-	f.StringVar(&p.brokers, "brokers,b", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
-	f.StringVar(&p.topic, "topic", "", "Kafka topic to send messages to")
-	f.StringVar(&p.version, "version,v", "0.8.2.0", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or env %s", EnvVersion))
-	f.DurationVar(&p.timeout, "timeout", 3*time.Second, "Timeout for request to Kafka (default: 3s)")
-	f.IntVar(&p.msgTotal, "n", 1000, `total number of messages`)
-	f.IntVar(&p.msgSize, "size", 1000, `message size`)
-	f.IntVar(&p.numThreads, "threads,t", 1, `message size`)
-	f.StringVar(&p.requiredAcks, "acks", "waitforlocal", `how many replica acknowledgements it must see before responding, e.g. WaitForLocal/WaitForAll/NoResponse`)
-	f.DurationVar(&p.flushFrequency, "flush.frequency", 0, `The best-effort frequency of flushes`)
-	f.IntVar(&p.flushMessages, "flush.messages", 0, `The best-effort number of messages needed to trigger a flush.`)
-	f.IntVar(&p.flushMaxMessages, "flush.max", 0, `The maximum number of messages the producer will send in a single broker request..`)
-	f.BoolVar(&p.sync, "sync", false, `Use sync producer`)
-
-	f.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage of kiss-produce:")
-		f.PrintDefaults()
-		fmt.Fprintln(os.Stderr, fmt.Sprintf(`
-The value for -brokers can also be set via environment variables %s.
-The value supplied on the command line wins over the environment variable value.
-
-kt kiss-produce -brokers 192.168.126.200:9092,192.168.126.200:9192,192.168.126.200:9292 -topic=elastic.backup -size 10 )`, EnvBrokers))
-	}
-
-	err := f.Parse(args)
-	if err != nil && strings.Contains(err.Error(), "flag: help requested") {
-		os.Exit(0)
-	} else if err != nil {
-		os.Exit(2)
-	}
+	p.parseArgs(args)
 
 	ctx, cancel := CreateCancelContext()
 
 	c := sarama.NewConfig()
 	c.Producer.RequiredAcks = ParseRequiredAcks(p.requiredAcks)
+	c.Producer.Partitioner = sarama.NewRoundRobinPartitioner
 	c.Producer.Flush.Messages = p.flushMessages
 	c.Producer.Flush.MaxMessages = p.flushMaxMessages
 	c.Producer.Flush.Frequency = p.flushFrequency
@@ -133,6 +105,39 @@ kt kiss-produce -brokers 192.168.126.200:9092,192.168.126.200:9192,192.168.126.2
 	log.Printf("Finish, TPS %f/s, total %d messages\n", float64(nn)/duration.Seconds(), nn)
 }
 
+func (p *kissProducer) parseArgs(args []string) {
+	f := fla9.NewFlagSet("kiss-produce", fla9.ContinueOnError)
+	f.StringVar(&p.brokers, "brokers,b", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
+	f.StringVar(&p.topic, "topic", "", "Kafka topic to send messages to")
+	f.StringVar(&p.version, "version,v", "0.8.2.0", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or env %s", EnvVersion))
+	f.DurationVar(&p.timeout, "timeout", 3*time.Second, "Timeout for request to Kafka (default: 3s)")
+	f.IntVar(&p.msgTotal, "n", 50000, `total number of messages`)
+	f.IntVar(&p.msgSize, "size", 100, `message size`)
+	f.IntVar(&p.numThreads, "routines,t", 1, `goroutine number`)
+	f.StringVar(&p.requiredAcks, "acks", "local", `how many replica acknowledgements it must see before responding, e.g.;local/all/none`)
+	f.DurationVar(&p.flushFrequency, "flush.frequency", 0, `The best-effort frequency of flushes`)
+	f.IntVar(&p.flushMessages, "flush.messages", 0, `The best-effort number of messages needed to trigger a flush.`)
+	f.IntVar(&p.flushMaxMessages, "flush.max", 0, `The maximum number of messages the producer will send in a single broker request..`)
+	f.BoolVar(&p.sync, "sync", false, `Use sync producer`)
+
+	f.Usage = func() {
+		fmt.Fprintln(os.Stderr, "Usage of kiss-produce:")
+		f.PrintDefaults()
+		fmt.Fprintln(os.Stderr, fmt.Sprintf(`
+The value for -brokers can also be set via environment variables %s.
+The value supplied on the command line wins over the environment variable value.
+
+kt kiss-produce -brokers 192.168.126.200:9092,192.168.126.200:9192,192.168.126.200:9292 -topic=elastic.backup -size 10 )`, EnvBrokers))
+	}
+
+	err := f.Parse(args)
+	if err != nil && strings.Contains(err.Error(), "flag: help requested") {
+		os.Exit(0)
+	} else if err != nil {
+		os.Exit(2)
+	}
+}
+
 func CreateCancelContext() (context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithCancel(context.Background())
 	sigs := make(chan os.Signal, 1)
@@ -147,12 +152,12 @@ func CreateCancelContext() (context.Context, context.CancelFunc) {
 }
 
 func produce(ctx context.Context, p kafkaProducer, numCh chan int, n int, s int, topic string) {
-	msg := &sarama.ProducerMessage{Topic: topic, Partition: -1, Value: sarama.StringEncoder(randx.String(s))}
 	i := 0
 	for ; i < n; i++ {
 		if ctx.Err() != nil {
 			break
 		}
+		msg := &sarama.ProducerMessage{Topic: topic, Partition: -1, Value: sarama.StringEncoder(randx.String(s))}
 		if _, err := p.SendMessage(msg); err != nil {
 			log.Printf("FAILED to send message: %s\n", err)
 		}
@@ -163,11 +168,11 @@ func produce(ctx context.Context, p kafkaProducer, numCh chan int, n int, s int,
 func ParseRequiredAcks(acks string) sarama.RequiredAcks {
 	acks = strings.ToLower(acks)
 	switch acks {
-	case "waitforlocal":
+	case "waitforlocal", "local":
 		return sarama.WaitForLocal
-	case "noresponse":
+	case "noresponse", "none":
 		return sarama.NoResponse
-	case "waitforall":
+	case "waitforall", "all":
 		return sarama.WaitForAll
 	default:
 		return sarama.WaitForLocal
