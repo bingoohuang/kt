@@ -18,7 +18,7 @@ type kissConsumer struct {
 }
 
 func (p *kissConsumer) run(args []string) {
-	f := fla9.NewFlagSet("perf-consume", fla9.ContinueOnError)
+	f := fla9.NewFlagSet("kiss-consume", fla9.ContinueOnError)
 	f.StringVar(&p.brokers, "brokers,b", "", "Comma separated list of brokers. Port defaults to 9092 when omitted (defaults to localhost:9092).")
 	f.StringVar(&p.topic, "topic", "", "Kafka topic to send messages to")
 	f.StringVar(&p.version, "version,v", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or env %s", EnvVersion))
@@ -45,7 +45,7 @@ kt kiss-consume -brokers 192.168.126.200:9092,192.168.126.200:9192,192.168.126.2
 		}
 	}()
 
-	partitionConsumer, err := consumer.ConsumePartition(p.topic, 0, sarama.OffsetNewest)
+	pc, err := consumer.ConsumePartition(p.topic, 0, sarama.OffsetNewest)
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -53,7 +53,7 @@ kt kiss-consume -brokers 192.168.126.200:9092,192.168.126.200:9192,192.168.126.2
 	log.Println("Start")
 	i := 0
 	for ; ; i++ {
-		msg := <-partitionConsumer.Messages()
+		msg := <-pc.Messages()
 		if string(msg.Value) == "THE END" {
 			break
 		}

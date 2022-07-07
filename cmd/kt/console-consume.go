@@ -21,6 +21,7 @@ type consoleConsumerCmd struct {
 
 	brokers       []string
 	topic         string
+	version       string
 	partitions    string
 	offset        string
 	verbose       bool
@@ -45,19 +46,24 @@ func (p *consoleConsumerCmd) run(args []string) {
 		printUsageErrorAndExit("-offset should be `oldest` or `newest`")
 	}
 
-	config := sarama.NewConfig()
+	sc := sarama.NewConfig()
 	if p.tlsEnabled {
 		tlsConfig, err := tls.NewConfig(p.tlsClientCert, p.tlsClientKey)
 		if err != nil {
 			printErrorAndExit(69, "Failed to create TLS config: %s", err)
 		}
 
-		config.Net.TLS.Enable = true
-		config.Net.TLS.Config = tlsConfig
-		config.Net.TLS.Config.InsecureSkipVerify = p.tlsSkipVerify
+		sc.Net.TLS.Enable = true
+		sc.Net.TLS.Config = tlsConfig
+		sc.Net.TLS.Config.InsecureSkipVerify = p.tlsSkipVerify
 	}
 
-	c, err := sarama.NewConsumer(p.brokers, config)
+	var err error
+	sc.Version, err = kt.ParseKafkaVersion(p.version)
+	if err != nil {
+		failStartup(err.Error())
+	}
+	c, err := sarama.NewConsumer(p.brokers, sc)
 	if err != nil {
 		printErrorAndExit(69, "Failed to start consumer: %s", err)
 	}
@@ -142,7 +148,9 @@ func (p *consoleConsumerCmd) parseArgs(args []string) {
 	f := fla9.NewFlagSet("console-consume", fla9.ContinueOnError)
 
 	f.StringVar(&p.flagBrokers, "brokers", "", "The comma separated list of brokers in the Kafka cluster")
-	f.StringVar(&p.topic, "topic", "", "REQUIRED: the topic to consume")
+	f.StringVar(&p.topic, "topic", "", "The topic to consume")
+	f.StringVar(&p.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or by env %s", kt.EnvVersion))
+
 	f.StringVar(&p.partitions, "partitions", "all", "The partitions to consume, can be 'all' or comma-separated numbers")
 	f.StringVar(&p.offset, "offset", "newest", "The offset to start with. Can be `oldest`, `newest`")
 	f.BoolVar(&p.verbose, "verbose", false, "Whether to turn on sarama logging")

@@ -17,15 +17,15 @@ func (c *Client) NewOffsetManager(group string) (sarama.OffsetManager, error) {
 }
 
 func (c ConsumerConfig) SetupClient() (*Client, error) {
-	cfg := sarama.NewConfig()
-	cfg.Version = c.Version
-	cfg.ClientID = "kt-consume-" + CurrentUserName()
+	sc := sarama.NewConfig()
+	sc.Version = c.Version
+	sc.ClientID = "kt-consume-" + CurrentUserName()
 
-	if err := c.Auth.SetupAuth(cfg); err != nil {
+	if err := c.Auth.SetupAuth(sc); err != nil {
 		return nil, err
 	}
 
-	client, err := sarama.NewClient(c.Brokers, cfg)
+	client, err := sarama.NewClient(c.Brokers, sc)
 	if err != nil {
 		return nil, err
 	}

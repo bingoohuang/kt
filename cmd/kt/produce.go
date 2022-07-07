@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/bingoohuang/jj"
 	"log"
 	"os"
 	"strings"
@@ -268,30 +269,30 @@ func (c *produceCmd) close() {
 func (c *produceCmd) deserializeLines(in chan string, out chan Message, partitionCount int32) {
 	defer func() { close(out) }()
 	for l := range in {
-		l := l
-		var msg Message
-
-		switch {
-		case c.literal:
-			msg.Value = &l
-			msg.Partition = &c.partition
-		default:
-			if err := json.Unmarshal([]byte(l), &msg); err != nil {
-				if c.verbose {
-					log.Printf("Failed to unmarshal input [%v], falling back to defaults. err=%v\n", l, err)
-				}
-				v := &l
-				if len(l) == 0 {
-					v = nil
-				}
-				msg = Message{Value: v}
-			}
-		}
-
-		c.setPartition(&msg, partitionCount)
-
+		msg := c.parseLine(l, partitionCount)
 		out <- msg
 	}
+}
+
+func (c *produceCmd) parseLine(l string, partitionCount int32) Message {
+	v := &l
+	if len(l) == 0 {
+		v = nil
+	}
+
+	msg := Message{Partition: &c.partition}
+	if c.literal || !jj.Valid(l) {
+		msg.Value = v
+	} else if err := json.Unmarshal([]byte(l), &msg); err != nil {
+		if c.verbose {
+			log.Printf("Failed to unmarshal input [%v], falling back to defaults. err=%v\n", l, err)
+		}
+
+		msg.Value = v
+	}
+
+	c.setPartition(&msg, partitionCount)
+	return msg
 }
 
 func (c *produceCmd) setPartition(msg *Message, partitionCount int32) {
