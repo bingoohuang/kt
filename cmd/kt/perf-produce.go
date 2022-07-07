@@ -27,14 +27,14 @@ import (
 // from https://github.com/Shopify/sarama/blob/main/tools/kafka-producer-performance/main.go
 
 type perfProduceCmd struct {
-	sync                bool
-	messageJSONTemplate string
-	messageBinary       bool
-	messageLoad         int
-	messageSize         int
-	flagBrokers         string
-	brokers             []string
-	securityProtocol    string
+	sync             bool
+	jsonTemplate     string
+	messageBinary    bool
+	messageLoad      int
+	messageSize      int
+	flagBrokers      string
+	brokers          []string
+	securityProtocol string
 
 	tlsRootCACerts string
 	tlsClientCert  string
@@ -295,7 +295,7 @@ func printErrorAndExit(code int, format string, values ...interface{}) {
 func (p *perfProduceCmd) parseArgs(args []string) {
 	f := fla9.NewFlagSet("perf-produce", fla9.ContinueOnError)
 	f.BoolVar(&p.sync, "sync", false, "Use a synchronous producer.")
-	f.StringVar(&p.messageJSONTemplate, "msg-json-template", "", "Use a json template for random message, e.g. ."+
+	f.StringVar(&p.jsonTemplate, "json-template", "", "Use a json template for random message, e.g. ."+
 		`'{"id":"@objectId","sex":"@random(male,female)","image":"@base64(file=100.png)","a":"@姓名","b":"@汉字","c":"@性别","d":"@地址","e":"@手机","f":"@身份证","g":"@发证机关","h":"@邮箱","i":"@银行卡","j":"@name","k":"@ksuid","l":"@objectId","m":"@random(男,女)","n":"@random_int(20-60)","o":"@random_time(yyyy-MM-dd)", "p":"@random_bool","q":"@regex([a-z]{5}@xyz[.]cn)"}'`)
 	f.BoolVar(&p.messageBinary, "msg-binary", false, "Use a random binary message content or ascii message.")
 	f.IntVar(&p.messageLoad, "msg-load,n", 50000, "The number of messages to produce to -topic.")
@@ -419,8 +419,8 @@ func (p *perfProduceCmd) generateMessages(messageLoad int) []*sarama.ProducerMes
 				Value: []byte(fmt.Sprintf("%d", atomic.AddInt32(&p.seq, 1))),
 			}}
 		}
-		if p.messageJSONTemplate != "" {
-			randJSON, _ := gen.Process(p.messageJSONTemplate)
+		if p.jsonTemplate != "" {
+			randJSON, _ := gen.Process(p.jsonTemplate)
 			pm.Value = sarama.StringEncoder(randJSON.Out)
 		} else if p.messageBinary {
 			payload := make([]byte, p.messageSize)

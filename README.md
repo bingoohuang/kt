@@ -12,8 +12,8 @@
     3. 使用 JJ 命令生成随机消息：`JJ_N=3 jj -gu a=@姓名 b=@汉字 c=@性别 d=@地址 e=@手机 f=@身份证 g=@发证机关 h=@邮箱 i=@银行卡 j=@name k=@ksuid l=@objectId m='@random(男,女)' n='@random_int(20-60)' o='@random_time(yyyy-MM-dd)' p=@random_bool q='@regex([a-z]{5}@xyz[.]cn)' |  kt produce -literal`
     4. 从文件中读取,每一行作为一个消息： `cat p20w.txt | kt produce -literal -stats`
 4. 生产消息性能压测
-    1. 随机字符串压测 `kt perf-produce`
-    2. 使用 JSON 模板生成性能压测消息： `kt perf-produce -msg-json-template '{"id":"@objectId","sex":"@random(male,female)"}'`
+    1. 随机字符串写入压测 `kt perf`
+    2. 使用 JSON 模板生成写入压测： `kt perf -msg-json-template '{"id":"@objectId","sex":"@random(male,female)"}'`
 5. 其它，看帮助
     1. 子命令列表：`kt help`
     2. 子命令帮助：`kt tail -help`
