@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"flag"
 	"fmt"
+	"github.com/bingoohuang/jj"
 	"io"
 	"log"
 	"math/rand"
@@ -26,12 +27,14 @@ import (
 // from https://github.com/Shopify/sarama/blob/main/tools/kafka-producer-performance/main.go
 
 type perfProduceCmd struct {
-	sync             bool
-	messageBinary    bool
-	messageLoad      int
-	messageSize      int
-	brokers          string
-	securityProtocol string
+	sync                bool
+	messageJSONTemplate string
+	messageBinary       bool
+	messageLoad         int
+	messageSize         int
+	flagBrokers         string
+	brokers             []string
+	securityProtocol    string
 
 	tlsRootCACerts string
 	tlsClientCert  string
@@ -101,11 +104,10 @@ func (p *perfProduceCmd) run(args []string) {
 		}
 	}(ctx)
 
-	brokers := strings.Split(p.brokers, ",")
 	if p.sync {
-		p.runSyncProducer(c, brokers)
+		p.runSyncProducer(c)
 	} else {
-		p.runAsyncProducer(c, brokers)
+		p.runAsyncProducer(c)
 	}
 
 	cancel()
@@ -143,8 +145,8 @@ func (p *perfProduceCmd) setupSSL(c *sarama.Config) {
 	c.Net.TLS.Config = tlsConfig
 }
 
-func (p *perfProduceCmd) runAsyncProducer(c *sarama.Config, brokers []string) {
-	producer, err := sarama.NewAsyncProducer(brokers, c)
+func (p *perfProduceCmd) runAsyncProducer(c *sarama.Config) {
+	producer, err := sarama.NewAsyncProducer(p.brokers, c)
 	if err != nil {
 		printErrorAndExit(69, "Failed to create producer: %s", err)
 	}
@@ -160,7 +162,7 @@ func (p *perfProduceCmd) runAsyncProducer(c *sarama.Config, brokers []string) {
 		for i := 0; i < p.messageLoad; i++ {
 			select {
 			case <-producer.Successes():
-			case err = <-producer.Errors():
+			case err := <-producer.Errors():
 				printErrorAndExit(69, "%s", err)
 			}
 		}
@@ -186,8 +188,8 @@ func (p *perfProduceCmd) runAsyncProducer(c *sarama.Config, brokers []string) {
 	close(messagesDone)
 }
 
-func (p *perfProduceCmd) runSyncProducer(config *sarama.Config, brokers []string) {
-	producer, err := sarama.NewSyncProducer(brokers, config)
+func (p *perfProduceCmd) runSyncProducer(config *sarama.Config) {
+	producer, err := sarama.NewSyncProducer(p.brokers, config)
 	if err != nil {
 		printErrorAndExit(69, "Failed to create producer: %s", err)
 	}
@@ -293,15 +295,17 @@ func printErrorAndExit(code int, format string, values ...interface{}) {
 func (p *perfProduceCmd) parseArgs(args []string) {
 	f := fla9.NewFlagSet("perf-produce", fla9.ContinueOnError)
 	f.BoolVar(&p.sync, "sync", false, "Use a synchronous producer.")
+	f.StringVar(&p.messageJSONTemplate, "msg-json-template", "", "Use a json template for random message, e.g. ."+
+		`'{"id":"@objectId","sex":"@random(male,female)","image":"@base64(file=100.png)","a":"@姓名","b":"@汉字","c":"@性别","d":"@地址","e":"@手机","f":"@身份证","g":"@发证机关","h":"@邮箱","i":"@银行卡","j":"@name","k":"@ksuid","l":"@objectId","m":"@random(男,女)","n":"@random_int(20-60)","o":"@random_time(yyyy-MM-dd)", "p":"@random_bool","q":"@regex([a-z]{5}@xyz[.]cn)"}'`)
 	f.BoolVar(&p.messageBinary, "msg-binary", false, "Use a random binary message content or ascii message.")
-	f.IntVar(&p.messageLoad, "msg-load,n", 50000, "REQUIRED: The number of messages to produce to -topic.")
-	f.IntVar(&p.messageSize, "msg-size", 100, "REQUIRED: The approximate size (in bytes) of each message to produce to -topic.")
-	f.StringVar(&p.brokers, "brokers", "127.0.0.1:9092", "REQUIRED: A comma separated list of broker addresses.")
+	f.IntVar(&p.messageLoad, "msg-load,n", 50000, "The number of messages to produce to -topic.")
+	f.IntVar(&p.messageSize, "msg-size", 100, "The approximate size (in bytes) of each message to produce to -topic.")
+	f.StringVar(&p.flagBrokers, "brokers", "", "A comma separated list of broker addresses.")
 	f.StringVar(&p.securityProtocol, "security-protocol", "PLAINTEXT", "The name of the security protocol to talk to Kafka (PLAINTEXT, SSL) (default: PLAINTEXT).")
 	f.StringVar(&p.tlsRootCACerts, "tls-ca-certs", "", "The path to a file that contains a set of root certificate authorities in PEM format to trust when verifying broker certificates when -security-protocol=SSL (leave empty to use the host's root CA set).")
 	f.StringVar(&p.tlsClientCert, "tls-client-cert", "", "The path to a file that contains the client certificate to send to the broker in PEM format if client authentication is required when -security-protocol=SSL (leave empty to disable client authentication).")
 	f.StringVar(&p.tlsClientKey, "tls-client-key", "", "The path to a file that contains the client private key linked to the client certificate in PEM format when -security-protocol=SSL (REQUIRED if tls-client-cert is provided).")
-	f.StringVar(&p.topic, "topic", "producer_perf_test", "REQUIRED: The topic to run the performance test on.")
+	f.StringVar(&p.topic, "topic", "", "The topic to run the performance test on.")
 	f.IntVar(&p.partition, "partition", -1, "The partition of -topic to run the performance test on.")
 	f.IntVar(&p.throughput, "throughput", 0, "The maximum number of messages to send per second (0 for no limit).")
 	f.IntVar(&p.maxOpenRequests, "max-open-requests", 5, "The maximum number of unacknowledged requests the client will send on a single connection before blocking (default: 5).")
@@ -338,12 +342,12 @@ kt perf-produce -brokers=kafka:9092
 	} else if err != nil {
 		os.Exit(2)
 	}
-	if p.brokers == "" {
-		printUsageErrorAndExit("-brokers is required")
+
+	p.brokers = kt.ParseBrokers(p.flagBrokers)
+	if p.topic, err = kt.ParseTopic(p.topic); err != nil {
+		failStartup(err.Error())
 	}
-	if p.topic == "" {
-		printUsageErrorAndExit("-topic is required")
-	}
+
 	if p.messageLoad <= 0 {
 		printUsageErrorAndExit("-message-load must be greater than 0")
 	}
@@ -406,6 +410,7 @@ func parseVersion(version string) sarama.KafkaVersion {
 
 func (p *perfProduceCmd) generateMessages(messageLoad int) []*sarama.ProducerMessage {
 	messages := make([]*sarama.ProducerMessage, messageLoad)
+	gen := jj.NewGen()
 	for i := 0; i < messageLoad; i++ {
 		pm := &sarama.ProducerMessage{Topic: p.topic, Partition: int32(p.partition)}
 		if p.seqHeader {
@@ -414,7 +419,10 @@ func (p *perfProduceCmd) generateMessages(messageLoad int) []*sarama.ProducerMes
 				Value: []byte(fmt.Sprintf("%d", atomic.AddInt32(&p.seq, 1))),
 			}}
 		}
-		if p.messageBinary {
+		if p.messageJSONTemplate != "" {
+			randJSON, _ := gen.Process(p.messageJSONTemplate)
+			pm.Value = sarama.StringEncoder(randJSON.Out)
+		} else if p.messageBinary {
 			payload := make([]byte, p.messageSize)
 			if _, err := rand.Read(payload); err != nil {
 				printErrorAndExit(69, "Failed to generate message payload: %s", err)

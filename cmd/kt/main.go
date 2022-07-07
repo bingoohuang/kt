@@ -13,13 +13,15 @@ Usage:
 	kt command [arguments]
 
 The commands are:
-	consume      consume messages.
+	consume/tail consume messages.
 	produce      produce messages.
+	perf-produce produce messages performance testing.
 	kiss-consume KISS consume messages.
 	kiss-produce KISS produce messages.
 	topic        topic information.
 	group        consumer group information and modification.
 	admin        basic cluster administration.
+	version      print program version and exit.
 
 Use "kt [command] -help" for more information about the command.
 Use "kt -version" for details on what version you are running.

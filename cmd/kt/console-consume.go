@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/bingoohuang/kt/pkg/kt"
 	"log"
 	"os"
 	"os/signal"
@@ -16,7 +17,9 @@ import (
 )
 
 type consoleConsumerCmd struct {
-	brokers       string
+	flagBrokers string
+
+	brokers       []string
 	topic         string
 	partitions    string
 	offset        string
@@ -54,7 +57,7 @@ func (p *consoleConsumerCmd) run(args []string) {
 		config.Net.TLS.Config.InsecureSkipVerify = p.tlsSkipVerify
 	}
 
-	c, err := sarama.NewConsumer(strings.Split(p.brokers, ","), config)
+	c, err := sarama.NewConsumer(p.brokers, config)
 	if err != nil {
 		printErrorAndExit(69, "Failed to start consumer: %s", err)
 	}
@@ -138,7 +141,7 @@ func (p *consoleConsumerCmd) getPartitions(c sarama.Consumer) ([]int32, error) {
 func (p *consoleConsumerCmd) parseArgs(args []string) {
 	f := fla9.NewFlagSet("console-consume", fla9.ContinueOnError)
 
-	f.StringVar(&p.brokers, "brokers", os.Getenv("KAFKA_PEERS"), "The comma separated list of brokers in the Kafka cluster")
+	f.StringVar(&p.flagBrokers, "brokers", "", "The comma separated list of brokers in the Kafka cluster")
 	f.StringVar(&p.topic, "topic", "", "REQUIRED: the topic to consume")
 	f.StringVar(&p.partitions, "partitions", "all", "The partitions to consume, can be 'all' or comma-separated numbers")
 	f.StringVar(&p.offset, "offset", "newest", "The offset to start with. Can be `oldest`, `newest`")
@@ -185,12 +188,9 @@ kt console-consume -help
 		os.Exit(2)
 	}
 
-	if p.brokers == "" {
-		printUsageErrorAndExit("You have to provide -brokers as a comma-separated list, or set the KAFKA_PEERS environment variable.")
-	}
-
-	if p.topic == "" {
-		printUsageErrorAndExit("-topic is required")
+	p.brokers = kt.ParseBrokers(p.flagBrokers)
+	if p.topic, err = kt.ParseTopic(p.topic); err != nil {
+		failStartup(err.Error())
 	}
 
 	if p.verbose {

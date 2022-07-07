@@ -87,8 +87,8 @@ github.com/bingoohuang/gg v0.0.0-20220420132852-a92417df3205 h1:CqebDU62sTEOLJ+w
 github.com/bingoohuang/gg v0.0.0-20220420132852-a92417df3205/go.mod h1:tltYEITxWTTXTTAqJNBK62x6Eg1iThhAnez8CxcQxQo=
 github.com/bingoohuang/golog v0.0.0-20211112131923-101b7e1b3d4c h1:vHfOVr/QXkfG9vpR+FD5tF87PhAkK3epGcMVxPbJlAM=
 github.com/bingoohuang/golog v0.0.0-20211112131923-101b7e1b3d4c/go.mod h1:atiVUeYe0Rsi80P0eDEF8lpf9qvt/w/qpil8PpNGYvw=
-github.com/bingoohuang/jj v0.0.0-20220428084335-44a9b165a9b7 h1:A6UIm1lamrHpbA0k0wL00y8rVNp+8azt2iAtREQQjaY=
-github.com/bingoohuang/jj v0.0.0-20220428084335-44a9b165a9b7/go.mod h1:Y58HGxN8aiCZOEN5uYI+dbFZO4PSMuun2y/M4CSMo8g=
+github.com/bingoohuang/jj v0.0.0-20220629062521-60be1773d20d h1:cKjj3hA1TW2DX1K4zt74uHYbSt8dcWPrPYN8wB05uj0=
+github.com/bingoohuang/jj v0.0.0-20220629062521-60be1773d20d/go.mod h1:Y58HGxN8aiCZOEN5uYI+dbFZO4PSMuun2y/M4CSMo8g=
 github.com/bingoohuang/sariaf v0.0.0-20201222043148-21fd9703b115/go.mod h1:DSi1LVR76Ap189KzzA40C8pFSpRZHsy/n+kgK8ihfhs=
 github.com/boltdb/bolt v1.3.1/go.mod h1:clJnj/oiGkjum5o1McbSZDSLxVThjynRyGBgiAx27Ps=
 github.com/buger/jsonparser v1.1.1 h1:2PnMjfWD7wBILjqQbt530v576A/cAbQvEW9gGIpYMUs=

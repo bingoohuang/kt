@@ -1,5 +1,47 @@
 # kt - a Kafka tool that likes JSON [![Build Status](https://travis-ci.org/bingoohuang/kt.svg?branch=master)](https://travis-ci.org/bingoohuang/kt)
 
+## kt 使用简介
+
+1. 通用设置 brokers 和 topic
+    1. 通过环境变量 `export KT_BROKERS=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092; export KT_TOPIC=elastic.backup`
+    2. 通过命令参数 `kt tail -brokers=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092 -topic elastic.backup`，不方便的是，导致命令过长，每次执行，都得带上这两个参数
+2. 消费最新消息 `kt tail`
+3. 生产消息
+    1. 直接消息：`echo '你要发送的消息载荷' |  kt produce -literal`
+    2. 指定 key 和 partition ，`echo '{"key": "id-23", "value": "消息载荷", "partition": 0}' | kt produce -topic greetings`
+    3. 使用 JJ 命令生成随机消息：`JJ_N=3 jj -gu a=@姓名 b=@汉字 c=@性别 d=@地址 e=@手机 f=@身份证 g=@发证机关 h=@邮箱 i=@银行卡 j=@name k=@ksuid l=@objectId m='@random(男,女)' n='@random_int(20-60)' o='@random_time(yyyy-MM-dd)' p=@random_bool q='@regex([a-z]{5}@xyz[.]cn)' |  kt produce -literal`
+    4. 从文件中读取,每一行作为一个消息： `cat p20w.txt | kt produce -literal -stats`
+4. 生产消息性能压测
+    1. 随机字符串压测 `kt perf-produce`
+    2. 使用 JSON 模板生成性能压测消息： `kt perf-produce -msg-json-template '{"id":"@objectId","sex":"@random(male,female)"}'`
+5. 其它，看帮助
+    1. 子命令列表：`kt help`
+    2. 子命令帮助：`kt tail -help`
+
+## 示例日志
+
+```sh
+# kt tail -brokers=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092 -topic elastic.backup
+topic: elastic.backup offset: 42840172 partition: 1 key:  timestamp: 2022-07-06 09:16:29.011 valueSize: 100B msg: {"partition":1,"offset":42840172,"value":"AHn3XiZADEPb1UG36b3Eh3yEM84csGvMgJ77A8cJyRiue5FeQQwBH9PeZILJT2MIWZlgTUllCiYFT2Xdi1n4mJsbKtdz5hoqkenj","timestamp":"2022-07-06T09:16:29.011+08:00"}
+topic: elastic.backup offset: 43249889 partition: 0 key:  timestamp: 2022-07-06 09:16:29.011 valueSize: 100B msg: {"partition":0,"offset":43249889,"value":"ufLYBbGHJ6okJoziJOcTtKwNQECXdAwczyoSGSYl3prCHpKQJdGlW6p3l3d7S6pYe9clGkt0zoJ2fBnYdNPhjPPgC7JBwA1rCt2V","timestamp":"2022-07-06T09:16:29.011+08:00"}
+topic: elastic.backup offset: 42835575 partition: 2 key:  timestamp: 2022-07-06 09:16:29.011 valueSize: 100B msg: {"partition":2,"offset":42835575,"value":"oubuyjAFVdCoN0aB4lJHgYnagkOg3Ivf8zT0Ui5SEotX9SsAqv4VTbQtcSvC2AKIms50VioUa7DpJJBDQOIOjCHjjmcCB4SvOMBU","timestamp":"2022-07-06T09:16:29.011+08:00"}
+^C
+# export KT_BROKERS=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092
+# export KT_TOPIC=elastic.backup
+# kt tail
+topic: elastic.backup offset: 43249889 partition: 0 key:  timestamp: 2022-07-06 09:16:29.011 valueSize: 100B msg: {"partition":0,"offset":43249889,"value":"ufLYBbGHJ6okJoziJOcTtKwNQECXdAwczyoSGSYl3prCHpKQJdGlW6p3l3d7S6pYe9clGkt0zoJ2fBnYdNPhjPPgC7JBwA1rCt2V","timestamp":"2022-07-06T09:16:29.011+08:00"}
+topic: elastic.backup offset: 42840172 partition: 1 key:  timestamp: 2022-07-06 09:16:29.011 valueSize: 100B msg: {"partition":1,"offset":42840172,"value":"AHn3XiZADEPb1UG36b3Eh3yEM84csGvMgJ77A8cJyRiue5FeQQwBH9PeZILJT2MIWZlgTUllCiYFT2Xdi1n4mJsbKtdz5hoqkenj","timestamp":"2022-07-06T09:16:29.011+08:00"}
+topic: elastic.backup offset: 42835575 partition: 2 key:  timestamp: 2022-07-06 09:16:29.011 valueSize: 100B msg: {"partition":2,"offset":42835575,"value":"oubuyjAFVdCoN0aB4lJHgYnagkOg3Ivf8zT0Ui5SEotX9SsAqv4VTbQtcSvC2AKIms50VioUa7DpJJBDQOIOjCHjjmcCB4SvOMBU","timestamp":"2022-07-06T09:16:29.011+08:00"}
+```
+
+```sh
+$ kt perf-produce
+50000 records sent, 98584.6 records/sec (9.40 MiB/sec ingress, 4.93 MiB/sec egress), 209.7 ms avg latency, 161.2 ms stddev, 191.0 ms 50th, 369.5 ms 75th, 429.0 ms 95th, 429.0 ms 99th, 429.0 ms 99.9th, 0 total req. in flight
+
+$ kt perf-produce -msg-json-template '{"id":"@objectId","sex":"@random(male,female)"}'
+50000 records sent, 608952.2 records/sec (58.07 MiB/sec ingress, 5.23 MiB/sec egress), 164.1 ms avg latency, 170.8 ms stddev, 119.0 ms 50th, 405.8 ms 75th, 420.0 ms 95th, 420.0 ms 99th, 420.0 ms 99.9th, 0 total req. in flight
+```
+
 Some reasons why you might be interested:
 
 * Consume messages on specific partitions between specific offsets.
