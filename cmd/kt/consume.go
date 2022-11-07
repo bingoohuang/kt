@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -37,6 +38,10 @@ type consumeArgs struct {
 	web        bool
 	webPort    int
 	webContext string
+
+	grep     string
+	n        int64
+	grepExpr *regexp.Regexp
 }
 
 func failStartup(msg string) {
@@ -66,15 +71,10 @@ func (c *consumeCmd) parseArgs(as []string) {
 		failStartup(err.Error())
 	}
 
-	var valEncoder, keyEncoder BytesEncoder
-	if valEncoder, err = ParseBytesEncoder(a.encVal); err != nil {
-		failStartup(err.Error())
-	}
-	if keyEncoder, err = ParseBytesEncoder(a.encKey); err != nil {
-		failStartup(err.Error())
-	}
+	valEncoder := ParseBytesEncoder(a.encVal)
+	keyEncoder := ParseBytesEncoder(a.encKey)
 
-	conf.MessageConsumer = NewPrintMessageConsumer(a.pretty, keyEncoder, valEncoder, c.sseSender)
+	conf.MessageConsumer = NewPrintMessageConsumer(a.pretty, keyEncoder, valEncoder, c.sseSender, a.grepExpr, a.n)
 	c.conf = conf
 }
 
@@ -92,8 +92,10 @@ func (c *consumeCmd) parseFlags(as []string) consumeArgs {
 	f.StringVar(&a.encVal, "enc.value", "string", "Present message value as string|hex|base64, defaults to string")
 	f.StringVar(&a.encKey, "enc.key", "string", "Present message key as string|hex|base64, defaults to string")
 	f.StringVar(&a.group, "group", "", "Consumer group to use for marking offsets. kt will mark offsets if this arg is supplied")
+	f.StringVar(&a.grep, "grep", "", "Grep")
 	f.BoolVar(&a.web, "web", false, `Start web server for HTTP requests and responses event`)
 	f.IntVar(&a.webPort, "webport", 0, `Web server port if web is enable`)
+	f.Int64Var(&a.n, "n", 0, `Max message to consume`)
 	f.StringVar(&a.webContext, "webcontext", "", `Web server context path if web is enable`)
 	f.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage of consume:")
@@ -106,6 +108,12 @@ func (c *consumeCmd) parseFlags(as []string) consumeArgs {
 		os.Exit(0)
 	} else if err != nil {
 		os.Exit(2)
+	}
+
+	if a.grep != "" {
+		if a.grepExpr, err = regexp.Compile(a.grep); err != nil {
+			log.Fatalf("compile regex %s failed: %v", a.grep, err)
+		}
 	}
 
 	c.parseWeb(&a)

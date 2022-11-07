@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"regexp"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -306,9 +309,13 @@ type PrintMessageConsumer struct {
 	Marshal                func(v interface{}) ([]byte, error)
 	ValEncoder, KeyEncoder BytesEncoder
 	sseSender              *SSESender
+	Grep                   *regexp.Regexp
+
+	N, n int64
 }
 
-func NewPrintMessageConsumer(pretty bool, keyEncoder, valEncoder BytesEncoder, sseSender *SSESender) *PrintMessageConsumer {
+func NewPrintMessageConsumer(pretty bool, keyEncoder, valEncoder BytesEncoder, sseSender *SSESender,
+	grep *regexp.Regexp, n int64) *PrintMessageConsumer {
 	marshal := json.Marshal
 
 	if pretty && terminal.IsTerminal(syscall.Stdout) {
@@ -320,11 +327,17 @@ func NewPrintMessageConsumer(pretty bool, keyEncoder, valEncoder BytesEncoder, s
 		KeyEncoder: keyEncoder,
 		ValEncoder: valEncoder,
 		sseSender:  sseSender,
+		Grep:       grep,
+		N:          n,
 	}
 }
 
-func (p PrintMessageConsumer) Consume(m *sarama.ConsumerMessage) {
-	msg := newConsumedMessage(m, p.KeyEncoder, p.ValEncoder)
+func (p *PrintMessageConsumer) Consume(m *sarama.ConsumerMessage) {
+	if p.Grep != nil && !p.Grep.Match(m.Value) {
+		return
+	}
+
+	msg := p.newConsumedMessage(m)
 	buf, err := p.Marshal(msg)
 	if err != nil {
 		switch mv := msg.Value.(type) {
@@ -337,8 +350,13 @@ func (p PrintMessageConsumer) Consume(m *sarama.ConsumerMessage) {
 		}
 	}
 
-	fmt.Printf("topic: %s offset: %d partition: %d key: %s timestamp: %s valueSize: %s msg: %s\n",
-		m.Topic, m.Offset, m.Partition, m.Key,
+	n := atomic.AddInt64(&p.n, 1)
+	if p.N > 0 && n >= p.N {
+		defer os.Exit(1)
+	}
+
+	fmt.Printf("#%03d topic: %s offset: %d partition: %d key: %s timestamp: %s valueSize: %s msg: %s\n",
+		n, m.Topic, m.Offset, m.Partition, m.Key,
 		m.Timestamp.Format("2006-01-02 15:04:05.000"),
 		man.Bytes(uint64(len(m.Value))),
 		string(buf),
@@ -378,7 +396,8 @@ type consumedMessage struct {
 	Headers   map[string]string `json:"headers,omitempty"`
 }
 
-func newConsumedMessage(m *sarama.ConsumerMessage, keyEnc, valEnc BytesEncoder) consumedMessage {
+func (p *PrintMessageConsumer) newConsumedMessage(m *sarama.ConsumerMessage) consumedMessage {
+	keyEnc, valEnc := p.KeyEncoder, p.ValEncoder
 	result := consumedMessage{
 		Partition: m.Partition,
 		Offset:    m.Offset,

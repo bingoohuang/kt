@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"strings"
 )
 
 type BytesEncoder interface {
@@ -16,17 +17,43 @@ func (f BytesEncoderFn) Encode(src []byte) string {
 	return f(src)
 }
 
-func ParseBytesEncoder(encoder string) (BytesEncoder, error) {
-	switch encoder {
-	case "hex":
-		return BytesEncoderFn(hex.EncodeToString), nil
-	case "base64":
-		return BytesEncoderFn(base64.StdEncoding.EncodeToString), nil
-	case "string":
-		return BytesEncoderFn(func(data []byte) string { return string(data) }), nil
+type BytesEncoderFns []BytesEncoderFn
+
+func (fns BytesEncoderFns) Encode(src []byte) string {
+	result := ""
+	for _, fn := range fns {
+		if r := fn(src); result != "" {
+			result += " " + r
+		} else {
+			result = r
+		}
 	}
 
-	return nil, fmt.Errorf(`bad encoder %s, only allow string/hex/base64`, encoder)
+	return result
+}
+
+func ParseBytesEncoder(encoder string) BytesEncoder {
+	var fns BytesEncoderFns
+	encoder = strings.ToLower(encoder)
+	if strings.Contains(encoder, "hex") {
+		fns = append(fns, func(src []byte) string {
+			return "hex: " + hex.EncodeToString(src)
+		})
+	}
+
+	if strings.Contains(encoder, "base64") {
+		fns = append(fns, func(src []byte) string {
+			return "base64: " + base64.StdEncoding.EncodeToString(src)
+		})
+	}
+
+	if strings.Contains(encoder, "string") {
+		fns = append(fns, func(data []byte) string {
+			return "string: " + string(data)
+		})
+	}
+
+	return fns
 }
 
 type StringDecoder interface {
