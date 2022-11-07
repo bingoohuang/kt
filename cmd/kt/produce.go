@@ -4,15 +4,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/bingoohuang/jj"
 	"log"
 	"os"
 	"strings"
 	"time"
 
-	. "github.com/bingoohuang/kt/pkg/kt"
-
 	"github.com/Shopify/sarama"
+	"github.com/bingoohuang/jj"
+	. "github.com/bingoohuang/kt/pkg/kt"
 )
 
 type produceArgs struct {

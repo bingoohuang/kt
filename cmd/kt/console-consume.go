@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/bingoohuang/kt/pkg/kt"
 	"log"
 	"os"
 	"os/signal"
@@ -14,6 +13,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/tools/tls"
 	"github.com/bingoohuang/gg/pkg/fla9"
+	"github.com/bingoohuang/kt/pkg/kt"
 )
 
 type consoleConsumerCmd struct {

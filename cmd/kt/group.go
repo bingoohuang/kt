@@ -11,9 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	. "github.com/bingoohuang/kt/pkg/kt"
-
 	"github.com/Shopify/sarama"
+	. "github.com/bingoohuang/kt/pkg/kt"
 )
 
 type groupCmd struct {

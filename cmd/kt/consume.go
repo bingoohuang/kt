@@ -10,12 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Shopify/sarama"
 	"github.com/bingoohuang/gg/pkg/netx/freeport"
 	"github.com/bingoohuang/gg/pkg/osx"
-
 	. "github.com/bingoohuang/kt/pkg/kt"
-
-	"github.com/Shopify/sarama"
 )
 
 type consumeCmd struct {

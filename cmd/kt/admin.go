@@ -10,9 +10,8 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/bingoohuang/kt/pkg/kt"
-
 	"github.com/Shopify/sarama"
+	. "github.com/bingoohuang/kt/pkg/kt"
 )
 
 type adminCmd struct {

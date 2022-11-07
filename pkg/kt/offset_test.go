@@ -66,7 +66,7 @@ func TestParseOffsets(t *testing.T) {
 		},
 		{
 			testName: "all-with-space",
-			input: "	all ",
+			input:    "	all ",
 			expected: map[int32]OffsetInterval{
 				-1: {
 					Start: Offset{Relative: true, Start: sarama.OffsetOldest},
