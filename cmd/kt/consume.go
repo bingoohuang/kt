@@ -89,7 +89,7 @@ func (c *consumeCmd) parseFlags(as []string) consumeArgs {
 	f.BoolVar(&a.verbose, "verbose", false, "More verbose logging to stderr")
 	f.BoolVar(&a.pretty, "pretty", false, "Control Output pretty printing")
 	f.StringVar(&a.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or by env %s", EnvVersion))
-	f.StringVar(&a.encVal, "enc.value", "string", "Present message value as string|hex|base64, defaults to string")
+	f.StringVar(&a.encVal, "enc.val", "string", "Present message value as string|hex|base64 or combinations(e.g. string,base64), defaults to string")
 	f.StringVar(&a.encKey, "enc.key", "string", "Present message key as string|hex|base64, defaults to string")
 	f.StringVar(&a.group, "group", "", "Consumer group to use for marking offsets. kt will mark offsets if this arg is supplied")
 	f.StringVar(&a.grep, "grep", "", "Grep")

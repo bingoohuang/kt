@@ -14,11 +14,26 @@ type Offset struct {
 	Relative bool
 	Start    int64
 	Diff     int64
+	Expr     string
 }
 
-func OldestOffset() Offset { return Offset{Relative: true, Start: sarama.OffsetOldest} }
-func NewestOffset() Offset { return Offset{Relative: true, Start: sarama.OffsetNewest} }
-func LastOffset() Offset   { return Offset{Relative: false, Start: 1<<63 - 1} }
+func (o Offset) String() string {
+	if o.Relative {
+		if o.Diff != 0 {
+			return fmt.Sprintf("%s%+d", o.Expr, o.Diff)
+		}
+		return o.Expr
+	}
+
+	if o.Expr != "" {
+		return o.Expr
+	}
+	return fmt.Sprintf("%d", o.Start)
+}
+
+func OldestOffset() Offset { return Offset{Relative: true, Start: sarama.OffsetOldest, Expr: "Oldest"} }
+func NewestOffset() Offset { return Offset{Relative: true, Start: sarama.OffsetNewest, Expr: "Newest"} }
+func LastOffset() Offset   { return Offset{Relative: false, Start: 1<<63 - 1, Expr: "1<<63-1"} }
 
 type OffsetInterval struct {
 	Start Offset

@@ -17,7 +17,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/tools/tls"
 	"github.com/bingoohuang/gg/pkg/fla9"
-	"github.com/bingoohuang/golog/pkg/randx"
+	"github.com/bingoohuang/gg/pkg/randx"
 	"github.com/bingoohuang/jj"
 	"github.com/bingoohuang/kt/pkg/kt"
 	"github.com/rcrowley/go-metrics"

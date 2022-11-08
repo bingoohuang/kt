@@ -8,7 +8,6 @@ require (
 	github.com/ThreeDotsLabs/watermill v1.1.1
 	github.com/ThreeDotsLabs/watermill-kafka/v2 v2.2.2
 	github.com/bingoohuang/gg v0.0.0-20220420132852-a92417df3205
-	github.com/bingoohuang/golog v0.0.0-20211112131923-101b7e1b3d4c
 	github.com/bingoohuang/jj v0.0.0-20220629062521-60be1773d20d
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/stretchr/testify v1.8.0

@@ -51,7 +51,6 @@ github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kB
 github.com/bingoohuang/easyjson v0.0.0-20211118132814-5606aa48c508 h1:Ew6KVZFgaX/C93v95gc1spL8H+4pis70mLSXFlvyk0E=
 github.com/bingoohuang/gg v0.0.0-20220420132852-a92417df3205 h1:CqebDU62sTEOLJ+wOQ4BbeeVcroNv8+WgnVhyuGQnhI=
 github.com/bingoohuang/gg v0.0.0-20220420132852-a92417df3205/go.mod h1:tltYEITxWTTXTTAqJNBK62x6Eg1iThhAnez8CxcQxQo=
-github.com/bingoohuang/golog v0.0.0-20211112131923-101b7e1b3d4c h1:vHfOVr/QXkfG9vpR+FD5tF87PhAkK3epGcMVxPbJlAM=
 github.com/bingoohuang/golog v0.0.0-20211112131923-101b7e1b3d4c/go.mod h1:atiVUeYe0Rsi80P0eDEF8lpf9qvt/w/qpil8PpNGYvw=
 github.com/bingoohuang/jj v0.0.0-20220629062521-60be1773d20d h1:cKjj3hA1TW2DX1K4zt74uHYbSt8dcWPrPYN8wB05uj0=
 github.com/bingoohuang/jj v0.0.0-20220629062521-60be1773d20d/go.mod h1:Y58HGxN8aiCZOEN5uYI+dbFZO4PSMuun2y/M4CSMo8g=

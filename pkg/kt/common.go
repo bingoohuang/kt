@@ -98,8 +98,8 @@ func PrintOutStats(in <-chan PrintContext, pretty, stats bool) {
 		cost := time.Since(start)
 		fmt.Printf("total messages %d, size %s, cost: %s, TPS: %f message/s %s/s\n",
 			messageNum, man.Bytes(uint64(valueSize)), cost,
-			float64(messageNum)/float64(cost.Seconds()),
-			man.Bytes(uint64(float64(valueSize)/float64(cost.Seconds()))))
+			float64(messageNum)/cost.Seconds(),
+			man.Bytes(uint64(float64(valueSize)/cost.Seconds())))
 	}()
 
 	for ctx := range in {

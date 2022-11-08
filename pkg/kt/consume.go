@@ -131,22 +131,25 @@ func (c *Consumer) consumePartitions(partitions []int32) {
 }
 
 func (c *Consumer) consumePartition(partition int32) error {
-	offsets, ok := c.Offsets[partition]
+	offset, ok := c.Offsets[partition]
 	if !ok {
-		offsets = c.Offsets[-1]
+		offset = c.Offsets[-1]
 	}
 
 	var err error
 	var start, end int64
-	if start, err = c.resolveOffset(offsets.Start, partition); err != nil {
+	if start, err = c.resolveOffset(offset.Start, partition); err != nil {
 		log.Printf("Failed to read Start Offset for partition %v err=%v\n", partition, err)
 		return nil
 	}
 
-	if end, err = c.resolveOffset(offsets.End, partition); err != nil {
+	if end, err = c.resolveOffset(offset.End, partition); err != nil {
 		log.Printf("Failed to read End Offset for partition %v err=%v\n", partition, err)
 		return nil
 	}
+
+	log.Printf("start to consume partition %d in [%d, %d] / [%s,%s]",
+		partition, start, end, offset.Start, offset.End)
 
 	var pc sarama.PartitionConsumer
 	if pc, err = c.SaramaConsumer.ConsumePartition(c.Topic, partition, start); err != nil {
@@ -162,20 +165,18 @@ func (c *Consumer) resolveOffset(o Offset, partition int32) (int64, error) {
 		return o.Start, nil
 	}
 
-	var res int64
-	var err error
-
-	if o.Start == sarama.OffsetNewest || o.Start == sarama.OffsetOldest {
-		if res, err = c.Client.SaramaClient.GetOffset(c.Topic, partition, o.Start); err != nil {
+	switch o.Start {
+	case sarama.OffsetNewest, sarama.OffsetOldest:
+		res, err := c.Client.SaramaClient.GetOffset(c.Topic, partition, o.Start)
+		if err != nil {
 			return 0, err
 		}
-
 		if o.Start == sarama.OffsetNewest {
 			res = res - 1
 		}
 
 		return res + o.Diff, nil
-	} else if o.Start == OffsetResume {
+	case OffsetResume:
 		if c.Group == "" {
 			return 0, fmt.Errorf("cannot resume without -group argument")
 		}
@@ -315,7 +316,8 @@ type PrintMessageConsumer struct {
 }
 
 func NewPrintMessageConsumer(pretty bool, keyEncoder, valEncoder BytesEncoder, sseSender *SSESender,
-	grep *regexp.Regexp, n int64) *PrintMessageConsumer {
+	grep *regexp.Regexp, n int64,
+) *PrintMessageConsumer {
 	marshal := json.Marshal
 
 	if pretty && terminal.IsTerminal(syscall.Stdout) {
