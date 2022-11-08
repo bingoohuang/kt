@@ -19,7 +19,7 @@ func TestFindPartitionsToConsume(t *testing.T) {
 		{
 			topic: "a",
 			offsets: map[int32]OffsetInterval{
-				10: {Offset{false, 2, 0}, Offset{false, 4, 0}},
+				10: {Start: Offset{Start: 2}, End: Offset{Start: 4}},
 			},
 			consumer: tConsumer{
 				topics:              []string{"a"},
@@ -35,7 +35,7 @@ func TestFindPartitionsToConsume(t *testing.T) {
 		{
 			topic: "a",
 			offsets: map[int32]OffsetInterval{
-				-1: {Offset{false, 3, 0}, Offset{false, 41, 0}},
+				-1: {Start: Offset{Start: 3}, End: Offset{Start: 41}},
 			},
 			consumer: tConsumer{
 				topics:              []string{"a"},
@@ -94,7 +94,7 @@ func TestConsume(t *testing.T) {
 
 	target.Client, _ = ConsumerConfig{Brokers: []string{"localhost:9092"}}.SetupClient()
 	target.Offsets = map[int32]OffsetInterval{
-		-1: {Start: Offset{false, 1, 0}, End: Offset{false, 5, 0}},
+		-1: {Start: Offset{Start: 1}, End: Offset{Start: 5}},
 	}
 
 	go target.consume(partitions)
@@ -169,6 +169,16 @@ type tPartitionConsumer struct {
 	errors              <-chan *sarama.ConsumerError
 }
 
+func (pc tPartitionConsumer) Pause() {
+}
+
+func (pc tPartitionConsumer) Resume() {
+}
+
+func (pc tPartitionConsumer) IsPaused() bool {
+	return false
+}
+
 func (pc tPartitionConsumer) AsyncClose() {}
 func (pc tPartitionConsumer) Close() error {
 	return pc.closeErr
@@ -195,6 +205,22 @@ type tConsumer struct {
 	consumePartitionErr map[tConsumePartition]error
 	closeErr            error
 	calls               chan tConsumePartition
+}
+
+func (c tConsumer) Pause(topicPartitions map[string][]int32) {
+}
+
+func (c tConsumer) Resume(topicPartitions map[string][]int32) {
+}
+
+func (c tConsumer) PauseAll() {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c tConsumer) ResumeAll() {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (c tConsumer) Topics() ([]string, error) {
