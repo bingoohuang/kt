@@ -214,12 +214,12 @@ func (c tConsumer) Resume(topicPartitions map[string][]int32) {
 }
 
 func (c tConsumer) PauseAll() {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (c tConsumer) ResumeAll() {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
