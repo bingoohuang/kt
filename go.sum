@@ -51,6 +51,8 @@ github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kB
 github.com/bingoohuang/easyjson v0.0.0-20211118132814-5606aa48c508 h1:Ew6KVZFgaX/C93v95gc1spL8H+4pis70mLSXFlvyk0E=
 github.com/bingoohuang/gg v0.0.0-20220420132852-a92417df3205 h1:CqebDU62sTEOLJ+wOQ4BbeeVcroNv8+WgnVhyuGQnhI=
 github.com/bingoohuang/gg v0.0.0-20220420132852-a92417df3205/go.mod h1:tltYEITxWTTXTTAqJNBK62x6Eg1iThhAnez8CxcQxQo=
+github.com/bingoohuang/godaemon v0.0.0-20221104024058-3bf8b9130635 h1:YR8zDR8SJi9Ea5LOVqz3pmh2vCU/HscLIrTmUYfs07w=
+github.com/bingoohuang/godaemon v0.0.0-20221104024058-3bf8b9130635/go.mod h1:xfxElNPL0/tWWnqq1Iq1W1N1lnG8032nJ5X/JhDdOwU=
 github.com/bingoohuang/golog v0.0.0-20211112131923-101b7e1b3d4c/go.mod h1:atiVUeYe0Rsi80P0eDEF8lpf9qvt/w/qpil8PpNGYvw=
 github.com/bingoohuang/jj v0.0.0-20220629062521-60be1773d20d h1:cKjj3hA1TW2DX1K4zt74uHYbSt8dcWPrPYN8wB05uj0=
 github.com/bingoohuang/jj v0.0.0-20220629062521-60be1773d20d/go.mod h1:Y58HGxN8aiCZOEN5uYI+dbFZO4PSMuun2y/M4CSMo8g=
@@ -311,6 +313,8 @@ github.com/juju/version v0.0.0-20180108022336-b64dbd566305/go.mod h1:kE8gK5X0CIm
 github.com/juju/version v0.0.0-20191219164919-81c1be00b9a6/go.mod h1:kE8gK5X0CImdr7qpSKl3xB2PmpySSmfj7zVbkZFs81U=
 github.com/julienschmidt/httprouter v1.1.1-0.20151013225520-77a895ad01eb/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7VTCxuUUipMqKk8s4w=
 github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7VTCxuUUipMqKk8s4w=
+github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 h1:iQTw/8FWTuc7uiaSepXwyf3o52HaUYcV+Tu66S3F5GA=
+github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0/go.mod h1:1NbS8ALrpOvjt0rHPNLyCIeMtbizbir8U//inJ+zuB8=
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=

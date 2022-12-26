@@ -8,6 +8,7 @@ require (
 	github.com/ThreeDotsLabs/watermill v1.1.1
 	github.com/ThreeDotsLabs/watermill-kafka/v2 v2.2.2
 	github.com/bingoohuang/gg v0.0.0-20220420132852-a92417df3205
+	github.com/bingoohuang/godaemon v0.0.0-20221104024058-3bf8b9130635
 	github.com/bingoohuang/jj v0.0.0-20220629062521-60be1773d20d
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/stretchr/testify v1.8.0
@@ -33,6 +34,7 @@ require (
 	github.com/jcmturner/gofork v1.7.6 // indirect
 	github.com/jcmturner/gokrb5/v8 v8.4.3 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
+	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/klauspost/compress v1.15.11 // indirect
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

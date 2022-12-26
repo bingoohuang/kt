@@ -14,6 +14,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/bingoohuang/gg/pkg/netx/freeport"
 	"github.com/bingoohuang/gg/pkg/osx"
+	"github.com/bingoohuang/godaemon"
 	. "github.com/bingoohuang/kt/pkg/kt"
 )
 
@@ -38,6 +39,7 @@ type consumeArgs struct {
 	web        bool
 	webPort    int
 	webContext string
+	daemon     bool
 
 	grep     string
 	n        int64
@@ -97,6 +99,7 @@ func (c *consumeCmd) parseFlags(as []string) consumeArgs {
 	f.IntVar(&a.webPort, "webport", 0, `Web server port if web is enable`)
 	f.Int64Var(&a.n, "n", 0, `Max message to consume`)
 	f.StringVar(&a.webContext, "webcontext", "", `Web server context path if web is enable`)
+	f.BoolVar(&a.daemon, "daemon", false, `Run in daemonize mode`)
 	f.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage of consume:")
 		f.PrintDefaults()
@@ -116,6 +119,7 @@ func (c *consumeCmd) parseFlags(as []string) consumeArgs {
 		}
 	}
 
+	godaemon.Daemonize(a.daemon)
 	c.parseWeb(&a)
 
 	return a
