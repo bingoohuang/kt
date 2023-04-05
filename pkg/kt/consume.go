@@ -20,33 +20,33 @@ import (
 )
 
 type Consumer struct {
-	sync.Mutex
+	SaramaConsumer sarama.Consumer
+	OffsetManager  sarama.OffsetManager
+
+	MessageConsumer MessageConsumer
 
 	Client *Client
 
-	SaramaConsumer sarama.Consumer
-	OffsetManager  sarama.OffsetManager
-	Poms           map[int32]sarama.PartitionOffsetManager
-	Offsets        map[int32]OffsetInterval
+	Poms    map[int32]sarama.PartitionOffsetManager
+	Offsets map[int32]OffsetInterval
 
 	out chan ConsumedContext
 
-	MessageConsumer MessageConsumer
-	Topic           string
-	Group           string
-	Timeout         time.Duration
+	Topic   string
+	Group   string
+	Timeout time.Duration
+	sync.Mutex
 }
 
 type ConsumerConfig struct {
-	Brokers []string
-	Version sarama.KafkaVersion
-	Auth    AuthConfig
-	Group   string
-	Topic   string
-	Offsets string
-	Timeout time.Duration
-
 	MessageConsumer MessageConsumer
+	Auth            AuthConfig
+	Group           string
+	Topic           string
+	Offsets         string
+	Brokers         []string
+	Version         sarama.KafkaVersion
+	Timeout         time.Duration
 }
 
 func StartConsume(conf ConsumerConfig) (c *Consumer, err error) {
@@ -299,11 +299,11 @@ type ConsumedContext struct {
 }
 
 type ConsumedMessage struct {
-	Partition int32      `json:"partition"`
-	Offset    int64      `json:"Offset"`
+	Timestamp *time.Time `json:"timestamp,omitempty"`
 	Key       string     `json:"key"`
 	Value     string     `json:"value"`
-	Timestamp *time.Time `json:"timestamp,omitempty"`
+	Offset    int64      `json:"Offset"`
+	Partition int32      `json:"partition"`
 }
 
 type PrintMessageConsumer struct {
@@ -390,12 +390,12 @@ type sseBean struct {
 }
 
 type consumedMessage struct {
-	Partition int32             `json:"partition"`
-	Offset    int64             `json:"offset"`
-	Key       string            `json:"key,omitempty"`
 	Value     interface{}       `json:"value,omitempty"`
 	Timestamp *time.Time        `json:"timestamp,omitempty"`
 	Headers   map[string]string `json:"headers,omitempty"`
+	Key       string            `json:"key,omitempty"`
+	Offset    int64             `json:"offset"`
+	Partition int32             `json:"partition"`
 }
 
 func (p *PrintMessageConsumer) newConsumedMessage(m *sarama.ConsumerMessage) consumedMessage {

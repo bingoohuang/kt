@@ -14,21 +14,21 @@ import (
 )
 
 type consoleProducerCmd struct {
-	brokers       string
+	logger        *log.Logger
+	tlsClientCert string
 	headers       string
 	topic         string
 	key           string
 	value         string
 	partitioner   string
+	brokers       string
+	tlsClientKey  string
 	partition     int
-	verbose       bool
-	showMetrics   bool
-	silent        bool
 	tlsEnabled    bool
 	tlsSkipVerify bool
-	tlsClientCert string
-	tlsClientKey  string
-	logger        *log.Logger
+	silent        bool
+	showMetrics   bool
+	verbose       bool
 }
 
 func (p *consoleProducerCmd) run(args []string) {

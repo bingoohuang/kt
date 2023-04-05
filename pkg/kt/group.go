@@ -7,7 +7,7 @@ type GroupInfo struct {
 }
 
 type GroupOffset struct {
-	Partition int32  `json:"partition"`
 	Offset    *int64 `json:"Offset"`
 	Lag       *int64 `json:"lag"`
+	Partition int32  `json:"partition"`
 }

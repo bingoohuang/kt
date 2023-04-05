@@ -20,11 +20,11 @@ type kissProducer struct {
 	brokers          string
 	topic            string
 	version          string
+	requiredAcks     string
 	timeout          time.Duration
 	msgTotal         int
 	msgSize          int
 	numThreads       int
-	requiredAcks     string
 	flushFrequency   time.Duration
 	flushMessages    int
 	flushMaxMessages int

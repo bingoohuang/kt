@@ -17,45 +17,46 @@ type topicArgs struct {
 	brokers    string
 	auth       string
 	filter     string
+	version    string
 	partitions bool
 	leaders    bool
 	replicas   bool
 	config     bool
 	verbose    bool
 	pretty     bool
-	version    string
 }
 
 type topicCmd struct {
-	brokers    []string
-	auth       AuthConfig
-	filter     *regexp.Regexp
-	partitions bool
-	leaders    bool
-	replicas   bool
-	config     bool
-	verbose    bool
-	pretty     bool
-	version    sarama.KafkaVersion
+	admin sarama.ClusterAdmin
 
-	client sarama.Client
-	admin  sarama.ClusterAdmin
-	out    chan PrintContext
+	client  sarama.Client
+	filter  *regexp.Regexp
+	out     chan PrintContext
+	auth    AuthConfig
+	brokers []string
+	version sarama.KafkaVersion
+
+	partitions bool
+	pretty     bool
+	verbose    bool
+	config     bool
+	replicas   bool
+	leaders    bool
 }
 
 type topicInfo struct {
+	Config     map[string]string `json:"config,omitempty"`
 	Name       string            `json:"name"`
 	Partitions []partition       `json:"partitions,omitempty"`
-	Config     map[string]string `json:"config,omitempty"`
 }
 
 type partition struct {
-	ID           int32   `json:"id"`
-	OldestOffset int64   `json:"oldest"`
-	NewestOffset int64   `json:"newest"`
 	Leader       string  `json:"leader,omitempty"`
 	Replicas     []int32 `json:"replicas,omitempty"`
 	ISRs         []int32 `json:"isrs,omitempty"`
+	OldestOffset int64   `json:"oldest"`
+	NewestOffset int64   `json:"newest"`
+	ID           int32   `json:"id"`
 }
 
 func (r *topicCmd) parseFlags(as []string) topicArgs {

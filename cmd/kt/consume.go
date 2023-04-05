@@ -19,8 +19,8 @@ import (
 )
 
 type consumeCmd struct {
-	conf      ConsumerConfig
 	sseSender *SSESender
+	conf      ConsumerConfig
 }
 
 func (c *consumeCmd) run(args []string) {
@@ -31,19 +31,20 @@ func (c *consumeCmd) run(args []string) {
 }
 
 type consumeArgs struct {
-	topic, brokers, auth, version  string
+	grepExpr                       *regexp.Regexp
+	webContext                     string
 	offsets, group, encKey, encVal string
-	timeout                        time.Duration
-	verbose, pretty                bool
+	topic, brokers, auth, version  string
 
-	web        bool
-	webPort    int
-	webContext string
-	daemon     bool
+	grep    string
+	timeout time.Duration
+	webPort int
+	n       int64
 
-	grep     string
-	n        int64
-	grepExpr *regexp.Regexp
+	web    bool
+	daemon bool
+
+	verbose, pretty bool
 }
 
 func failStartup(msg string) {

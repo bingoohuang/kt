@@ -15,31 +15,31 @@ import (
 )
 
 type adminCmd struct {
-	brokers []string
-	verbose bool
-	version sarama.KafkaVersion
-	timeout *time.Duration
-	auth    AuthConfig
+	admin       sarama.ClusterAdmin
+	timeout     *time.Duration
+	topicDetail *sarama.TopicDetail
+	auth        AuthConfig
 
-	topicCreate  string
-	topicDetail  *sarama.TopicDetail
+	topicCreate string
+	topicDelete string
+
+	brokers      []string
+	version      sarama.KafkaVersion
+	verbose      bool
 	validateOnly bool
-	topicDelete  string
-
-	admin sarama.ClusterAdmin
 }
 
 type adminArgs struct {
 	brokers string
-	verbose bool
 	version string
 	timeout string
 	auth    string
 
 	topicCreate  string
 	topicConfig  string
-	validateOnly bool
 	topicDelete  string
+	verbose      bool
+	validateOnly bool
 }
 
 func (r *adminCmd) parseArgs(as []string) {

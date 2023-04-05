@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -15,22 +16,22 @@ import (
 )
 
 type produceArgs struct {
-	topic       string
-	partition   int
+	version     string
+	partitioner string
 	brokers     string
 	auth        string
+	topic       string
+	decVal      string
+	decKey      string
+	compress    string
 	batch       int
 	timeout     time.Duration
-	verbose     bool
-	pretty      bool
-	stats       bool
-	version     string
-	compress    string
-	literal     bool
-	decKey      string
-	decVal      string
-	partitioner string
+	partition   int
 	bufSize     int
+	stats       bool
+	pretty      bool
+	literal     bool
+	verbose     bool
 }
 
 type Message struct {
@@ -180,7 +181,7 @@ loop:
 						failf("failed to find leader in broker response, giving up")
 					}
 
-					if err = b.Open(cfg); err != nil && err != sarama.ErrAlreadyConnected {
+					if err = b.Open(cfg); err != nil && errors.Is(err, sarama.ErrAlreadyConnected) {
 						failf("failed to open broker connection err=%s", err)
 					}
 					if connected, err := broker.Connected(); !connected && err != nil {
@@ -198,24 +199,25 @@ loop:
 }
 
 type produceCmd struct {
-	topic                  string
-	brokers                []string
-	auth                   AuthConfig
-	batch                  int
-	timeout                time.Duration
-	verbose                bool
-	pretty                 bool
-	stats                  bool
-	literal                bool
-	partition              int32
-	version                sarama.KafkaVersion
-	compress               sarama.CompressionCodec
-	partitioner            string
 	keyDecoder, valDecoder StringDecoder
-	bufSize                int
+	out                    chan PrintContext
 
-	leaders map[int32]*sarama.Broker
-	out     chan PrintContext
+	leaders     map[int32]*sarama.Broker
+	auth        AuthConfig
+	topic       string
+	partitioner string
+	brokers     []string
+	version     sarama.KafkaVersion
+	timeout     time.Duration
+	bufSize     int
+
+	batch     int
+	partition int32
+	compress  sarama.CompressionCodec
+	literal   bool
+	stats     bool
+	pretty    bool
+	verbose   bool
 }
 
 func (c *produceCmd) run(as []string) {

@@ -16,21 +16,20 @@ import (
 )
 
 type groupCmd struct {
-	brokers      []string
-	auth         AuthConfig
-	group        string
+	client       sarama.Client
 	filterGroups *regexp.Regexp
 	filterTopics *regexp.Regexp
+	out          chan PrintContext
+	auth         AuthConfig
+	group        string
 	topic        string
 	partitions   []int32
+	brokers      []string
+	version      sarama.KafkaVersion
 	reset        int64
 	verbose      bool
 	pretty       bool
-	version      sarama.KafkaVersion
 	offsets      bool
-
-	client sarama.Client
-	out    chan PrintContext
 }
 
 const (
@@ -224,8 +223,8 @@ func (c *groupCmd) fetchPartitions(top string) []int32 {
 }
 
 type findGroupResult struct {
-	done  bool
 	group string
+	done  bool
 }
 
 func (c *groupCmd) findGroups(brokers []*sarama.Broker) []string {
@@ -394,9 +393,9 @@ type groupArgs struct {
 	filterGroups string
 	filterTopics string
 	reset        string
+	version      string
 	verbose      bool
 	pretty       bool
-	version      string
 	offsets      bool
 }
 

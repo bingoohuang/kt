@@ -17,20 +17,21 @@ import (
 )
 
 type consoleConsumerCmd struct {
-	flagBrokers string
-
-	brokers       []string
+	logger        *log.Logger
+	tlsClientCert string
 	topic         string
 	version       string
 	partitions    string
 	offset        string
+	flagBrokers   string
+
+	tlsClientKey string
+
+	brokers       []string
+	bufferSize    int
 	verbose       bool
 	tlsEnabled    bool
 	tlsSkipVerify bool
-	tlsClientCert string
-	tlsClientKey  string
-	bufferSize    int
-	logger        *log.Logger
 }
 
 func (p *consoleConsumerCmd) run(args []string) {

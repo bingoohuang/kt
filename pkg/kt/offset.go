@@ -1,6 +1,7 @@
 package kt
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -11,10 +12,10 @@ import (
 const OffsetResume int64 = -3
 
 type Offset struct {
-	Relative bool
+	Expr     string
 	Start    int64
 	Diff     int64
-	Expr     string
+	Relative bool
 }
 
 func (o Offset) String() string {
@@ -106,7 +107,7 @@ func parsePartition(s string) (int32, error) {
 	}
 	p, err := strconv.ParseUint(s, 10, 31)
 	if err != nil {
-		if err := err.(*strconv.NumError); err.Err == strconv.ErrRange {
+		if errors.Is(err, strconv.ErrRange) {
 			return 0, fmt.Errorf("partition number %q is too large", s)
 		}
 		return 0, fmt.Errorf("invalid partition number %q", s)
@@ -160,8 +161,8 @@ func parseIntervalPart(s string, defaultOffset Offset) (Offset, error) {
 			Start: int64(n),
 		}, nil
 	}
-	if err := err.(*strconv.NumError); err.Err == strconv.ErrRange {
-		return Offset{}, fmt.Errorf("Offset %q is too large", s)
+	if errors.Is(err, strconv.ErrRange) {
+		return Offset{}, fmt.Errorf("offset %q is too large", s)
 	}
 	o, err := parseRelativeOffset(s)
 	if err != nil {
@@ -199,8 +200,8 @@ func parseRelativeOffset(s string) (Offset, error) {
 	// so the diff ends up with the correct sign.
 	diff, err := strconv.ParseInt(s[i:], 10, 64)
 	if err != nil {
-		if err := err.(*strconv.NumError); err.Err == strconv.ErrRange {
-			return Offset{}, fmt.Errorf("Offset %q is too large", s)
+		if errors.Is(err, strconv.ErrRange) {
+			return Offset{}, fmt.Errorf("offset %q is too large", s)
 		}
 		return Offset{}, fmt.Errorf("invalid Offset %q", s)
 	}

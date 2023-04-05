@@ -26,39 +26,41 @@ import (
 // from https://github.com/Shopify/sarama/blob/main/tools/kafka-producer-performance/main.go
 
 type perfProduceCmd struct {
-	sync             bool
+	tlsClientCert    string
 	jsonTemplate     string
-	messageBinary    bool
-	messageLoad      int
-	messageSize      int
+	version          string
+	clientID         string
+	compression      string
 	flagBrokers      string
-	brokers          []string
 	securityProtocol string
 
 	tlsRootCACerts string
-	tlsClientCert  string
+	requiredAcks   string
 	tlsClientKey   string
 	topic          string
 
+	partitioner     string
+	brokers         []string
+	maxOpenRequests int
+	flushMessages   int
+	maxMessageBytes int
+	throughput      int
+	timeout         time.Duration
+
 	partition         int
-	throughput        int
-	maxOpenRequests   int
-	maxMessageBytes   int
-	requiredAcks      string
-	timeout           time.Duration
-	partitioner       string
-	compression       string
+	messageSize       int
 	flushFrequency    time.Duration
 	flushBytes        int
-	flushMessages     int
-	flushMaxMessages  int
-	clientID          string
-	channelBufferSize int
 	routines          int
-	version           string
-	verbose           bool
+	flushMaxMessages  int
+	messageLoad       int
+	channelBufferSize int
 
-	seq       int32
+	seq           int32
+	sync          bool
+	messageBinary bool
+	verbose       bool
+
 	seqHeader bool
 }
 
