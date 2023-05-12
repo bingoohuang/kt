@@ -97,7 +97,7 @@ func readStdinLines(max int, out chan string) {
 func hashCode(s string) (hc int32) {
 	for _, r := range s {
 		r1, r2 := utf16.EncodeRune(r)
-		if r1 == 0xfffd && r1 == r2 {
+		if r1 == 0xfffd && r2 == 0xfffd {
 			hc = hc*31 + r
 		} else {
 			hc = (hc*31+r1)*31 + r2

@@ -1,18 +1,18 @@
 module github.com/bingoohuang/kt
 
-go 1.18
+go 1.20
 
 require (
 	github.com/AndrewBurian/eventsource v2.1.0+incompatible
 	github.com/Shopify/sarama v1.38.1
 	github.com/ThreeDotsLabs/watermill v1.2.0
 	github.com/ThreeDotsLabs/watermill-kafka/v2 v2.2.2
-	github.com/bingoohuang/gg v0.0.0-20230327022916-8702b50cb468
-	github.com/bingoohuang/godaemon v0.0.0-20221227014647-b7095678b1f2
-	github.com/bingoohuang/jj v0.0.0-20230315013842-760a1ff6a8c0
+	github.com/bingoohuang/gg v0.0.0-20230510011343-87bfcf343abf
+	github.com/bingoohuang/godaemon v0.0.0-20230424004201-8d0978814fb0
+	github.com/bingoohuang/jj v0.0.0-20230423094029-a18679e37246
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/stretchr/testify v1.8.2
-	golang.org/x/crypto v0.7.0
+	golang.org/x/crypto v0.9.0
 )
 
 require (
@@ -51,8 +51,8 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.31.0 // indirect
 	go.opentelemetry.io/otel v1.6.1 // indirect
 	go.opentelemetry.io/otel/trace v1.6.1 // indirect
-	golang.org/x/net v0.8.0 // indirect
-	golang.org/x/sys v0.6.0 // indirect
-	golang.org/x/term v0.6.0 // indirect
+	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/term v0.8.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

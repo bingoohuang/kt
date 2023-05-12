@@ -75,15 +75,16 @@ func (p *consoleProducerCmd) run(args []string) {
 		message.Key = sarama.StringEncoder(p.key)
 	}
 
-	if p.value != "" {
+	switch {
+	case p.value != "":
 		message.Value = sarama.StringEncoder(p.value)
-	} else if stdinAvailable() {
+	case stdinAvailable():
 		bytes, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			printErrorAndExit(66, "Failed to read data from the standard input: %s", err)
 		}
 		message.Value = sarama.ByteEncoder(bytes)
-	} else {
+	default:
 		printUsageErrorAndExit("-value is required, or you have to provide the value on stdin")
 	}
 

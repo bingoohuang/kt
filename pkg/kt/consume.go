@@ -172,7 +172,7 @@ func (c *Consumer) resolveOffset(o Offset, partition int32) (int64, error) {
 			return 0, err
 		}
 		if o.Start == sarama.OffsetNewest {
-			res = res - 1
+			res--
 		}
 
 		return res + o.Diff, nil

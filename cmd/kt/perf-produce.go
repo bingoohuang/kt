@@ -420,16 +420,19 @@ func (p *perfProduceCmd) generateMessages(messageLoad int) []*sarama.ProducerMes
 				Value: []byte(fmt.Sprintf("%d", atomic.AddInt32(&p.seq, 1))),
 			}}
 		}
-		if p.jsonTemplate != "" {
+
+		switch {
+
+		case p.jsonTemplate != "":
 			randJSON, _ := gen.Process(p.jsonTemplate)
 			pm.Value = sarama.StringEncoder(randJSON.Out)
-		} else if p.messageBinary {
+		case p.messageBinary:
 			payload := make([]byte, p.messageSize)
 			if _, err := rand.Read(payload); err != nil {
 				printErrorAndExit(69, "Failed to generate message payload: %s", err)
 			}
 			pm.Value = sarama.ByteEncoder(payload)
-		} else {
+		default:
 			pm.Value = sarama.StringEncoder(randx.String(p.messageSize))
 		}
 
