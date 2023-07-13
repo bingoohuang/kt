@@ -65,12 +65,12 @@ func parseDuration(s string) *time.Duration {
 	return &v
 }
 
-func quitf(msg string, args ...interface{}) {
+func quitf(msg string, args ...any) {
 	fmt.Fprintf(os.Stdout, msg+"\n", args...)
 	os.Exit(0)
 }
 
-func failf(msg string, args ...interface{}) {
+func failf(msg string, args ...any) {
 	log.Printf(msg+"\n", args...)
 	os.Exit(1)
 }

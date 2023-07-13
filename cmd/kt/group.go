@@ -13,6 +13,8 @@ import (
 
 	"github.com/Shopify/sarama"
 	. "github.com/bingoohuang/kt/pkg/kt"
+	"github.com/elliotchance/pie/v2"
+	"github.com/samber/lo"
 )
 
 type groupCmd struct {
@@ -47,40 +49,33 @@ func (c *groupCmd) run(args []string) {
 	}
 
 	if c.client, err = sarama.NewClient(c.brokers, c.saramaConfig()); err != nil {
-		failf("failed to create client err=%v", err)
+		failf("E! create client: %v", err)
 	}
 
 	brokers := c.client.Brokers()
-	log.Printf("found %v brokers\n", len(brokers))
+	log.Printf("found %v brokers", len(brokers))
 
 	groups := []string{c.group}
 	if c.group == "" {
-		groups = []string{}
-		for _, g := range c.findGroups(brokers) {
-			if c.filterGroups.MatchString(g) {
-				groups = append(groups, g)
-			}
-		}
+		groups = pie.Of(c.findGroups(brokers)).Filter(c.filterGroups.MatchString).Result
+		groups = lo.Uniq(groups)
 	}
-	log.Printf("found %v groups\n", len(groups))
+
+	log.Printf("found %d groups: %v", len(groups), groups)
 
 	topics := []string{c.topic}
 	if c.topic == "" {
-		topics = []string{}
-		for _, t := range c.fetchTopics() {
-			if c.filterTopics.MatchString(t) {
-				topics = append(topics, t)
-			}
-		}
+		topics = pie.Of(c.fetchTopics()).Filter(c.filterTopics.MatchString).Result
+		topics = lo.Uniq(topics)
 	}
-	log.Printf("found %v topics\n", len(topics))
+	log.Printf("found %d topics: %v", len(topics), topics)
 
 	c.out = make(chan PrintContext)
 	go PrintOut(c.out, c.pretty)
 
 	if !c.offsets {
-		for i, grp := range groups {
-			ctx := PrintContext{Output: GroupInfo{Name: grp}, Done: make(chan struct{})}
+		for i, group := range groups {
+			ctx := PrintContext{Output: GroupInfo{Name: group}, Done: make(chan struct{})}
 			c.out <- ctx
 			<-ctx.Done
 
@@ -102,38 +97,34 @@ func (c *groupCmd) run(args []string) {
 	}
 
 	wg := &sync.WaitGroup{}
-	wg.Add(len(groups) * len(topics))
-	for _, grp := range groups {
-		for top, parts := range topicPartitions {
-			go func(grp, topic string, partitions []int32) {
-				c.printGroupTopicOffset(grp, topic, partitions)
-				wg.Done()
-			}(grp, top, parts)
+	for _, group := range groups {
+		for topic, partitions := range topicPartitions {
+			wg.Add(1)
+			go func(group, topic string, partitions []int32) {
+				defer wg.Done()
+				c.printGroupTopicOffset(group, topic, partitions)
+			}(group, topic, partitions)
 		}
 	}
 	wg.Wait()
 }
 
-func (c *groupCmd) printGroupTopicOffset(grp, top string, parts []int32) {
-	target := GroupInfo{Name: grp, Topic: top, Offsets: make([]GroupOffset, 0, len(parts))}
+func (c *groupCmd) printGroupTopicOffset(group, topic string, partitions []int32) {
+	target := GroupInfo{Name: group, Topic: topic, Offsets: make([]GroupOffset, 0, len(partitions))}
 	results := make(chan GroupOffset)
-	done := make(chan struct{})
 
 	wg := &sync.WaitGroup{}
-	wg.Add(len(parts))
-	for _, part := range parts {
-		go c.fetchGroupOffset(wg, grp, top, part, results)
+	for _, part := range partitions {
+		wg.Add(1)
+		go func(part int32) {
+			defer wg.Done()
+			c.fetchGroupOffset(group, topic, part, results)
+		}(part)
 	}
-	go func() { wg.Wait(); close(done) }()
+	go func() { wg.Wait(); close(results) }()
 
-awaitGroupOffsets:
-	for {
-		select {
-		case res := <-results:
-			target.Offsets = append(target.Offsets, res)
-		case <-done:
-			break awaitGroupOffsets
-		}
+	for res := range results {
+		target.Offsets = append(target.Offsets, res)
 	}
 
 	if len(target.Offsets) > 0 {
@@ -149,32 +140,30 @@ awaitGroupOffsets:
 func (c *groupCmd) resolveOffset(top string, part int32, off int64) int64 {
 	resolvedOff, err := c.client.GetOffset(top, part, off)
 	if err != nil {
-		failf("failed to get Offset to reset to for partition=%d err=%v", part, err)
+		failf("get Offset to reset to for partition=%d: %v", part, err)
 	}
 
 	if c.verbose {
-		log.Printf("resolved Offset %v for topic=%s partition=%d to %v\n", off, top, part, resolvedOff)
+		log.Printf("resolved Offset %v for topic=%s partition=%d to %v", off, top, part, resolvedOff)
 	}
 
 	return resolvedOff
 }
 
-func (c *groupCmd) fetchGroupOffset(wg *sync.WaitGroup, grp, top string, part int32, results chan<- GroupOffset) {
-	defer wg.Done()
-
+func (c *groupCmd) fetchGroupOffset(group, topic string, part int32, results chan<- GroupOffset) {
 	if c.verbose {
-		log.Printf("fetching Offset information for group=%v topic=%v partition=%v\n", grp, top, part)
+		log.Printf("fetching Offset information for group=%v topic=%v partition=%v", group, topic, part)
 	}
 
-	offsetManager, err := sarama.NewOffsetManagerFromClient(grp, c.client)
+	offsetManager, err := sarama.NewOffsetManagerFromClient(group, c.client)
 	if err != nil {
-		failf("failed to create client err=%v", err)
+		failf("create client: %v", err)
 	}
 	defer LogClose("Offset manager", offsetManager)
 
-	pom, err := offsetManager.ManagePartition(top, part)
+	pom, err := offsetManager.ManagePartition(topic, part)
 	if err != nil {
-		failf("failed to manage partition group=%s topic=%s partition=%d err=%v", grp, top, part, err)
+		failf("manage partition group=%s topic=%s partition=%d: %v", group, topic, part, err)
 	}
 	defer LogClose("partition Offset manager", pom)
 
@@ -184,7 +173,7 @@ func (c *groupCmd) fetchGroupOffset(wg *sync.WaitGroup, grp, top string, part in
 	if c.reset >= 0 || specialOffset {
 		resolvedOff := c.reset
 		if specialOffset {
-			resolvedOff = c.resolveOffset(top, part, c.reset)
+			resolvedOff = c.resolveOffset(topic, part, c.reset)
 		}
 		if resolvedOff > groupOff {
 			pom.MarkOffset(resolvedOff, "")
@@ -201,7 +190,7 @@ func (c *groupCmd) fetchGroupOffset(wg *sync.WaitGroup, grp, top string, part in
 		return
 	}
 
-	partOff := c.resolveOffset(top, part, sarama.OffsetNewest)
+	partOff := c.resolveOffset(topic, part, sarama.OffsetNewest)
 	lag := partOff - groupOff
 	results <- GroupOffset{Partition: part, Offset: &groupOff, Lag: &lag}
 }
@@ -209,7 +198,7 @@ func (c *groupCmd) fetchGroupOffset(wg *sync.WaitGroup, grp, top string, part in
 func (c *groupCmd) fetchTopics() []string {
 	tps, err := c.client.Topics()
 	if err != nil {
-		failf("failed to read topics err=%v", err)
+		failf("read topics: %v", err)
 	}
 	return tps
 }
@@ -217,68 +206,52 @@ func (c *groupCmd) fetchTopics() []string {
 func (c *groupCmd) fetchPartitions(top string) []int32 {
 	ps, err := c.client.Partitions(top)
 	if err != nil {
-		failf("failed to read partitions for topic=%s err=%v", top, err)
+		failf("read partitions for topic=%s: %v", top, err)
 	}
 	return ps
 }
 
-type findGroupResult struct {
-	group string
-	done  bool
-}
+func (c *groupCmd) findGroups(brokers []*sarama.Broker) (groups []string) {
+	var wg sync.WaitGroup
 
-func (c *groupCmd) findGroups(brokers []*sarama.Broker) []string {
-	var (
-		doneCount int
-		groups    = []string{}
-		results   = make(chan findGroupResult)
-		errs      = make(chan error)
-	)
-
+	groupCh := make(chan string)
 	for _, broker := range brokers {
-		go c.findGroupsOnBroker(broker, results, errs)
+		wg.Add(1)
+		go func(broker *sarama.Broker) {
+			defer wg.Done()
+			c.findGroupsOnBroker(broker, groupCh)
+		}(broker)
 	}
 
-awaitGroups:
-	for {
-		if doneCount == len(brokers) {
-			return groups
-		}
+	go func() {
+		wg.Wait()
+		close(groupCh)
+	}()
 
-		select {
-		case err := <-errs:
-			failf("failed to find groups err=%v", err)
-		case res := <-results:
-			if res.done {
-				doneCount++
-				continue awaitGroups
-			}
-			groups = append(groups, res.group)
-		}
+	for group := range groupCh {
+		groups = append(groups, group)
 	}
+
+	return groups
 }
 
-func (c *groupCmd) findGroupsOnBroker(broker *sarama.Broker, results chan findGroupResult, errs chan error) {
-	var (
-		err  error
-		resp *sarama.ListGroupsResponse
-	)
-	if err = c.connect(broker); err != nil {
-		errs <- fmt.Errorf("failed to connect to broker %s err=%q", broker.Addr(), err)
+func (c *groupCmd) findGroupsOnBroker(broker *sarama.Broker, groupCh chan string) {
+	if err := c.connect(broker); err != nil {
+		failf("failed to connect to broker %s err=%q", broker.Addr(), err)
 	}
 
-	if resp, err = broker.ListGroups(&sarama.ListGroupsRequest{}); err != nil {
-		errs <- fmt.Errorf("failed to list brokers on %s err=%q", broker.Addr(), err)
+	resp, err := broker.ListGroups(&sarama.ListGroupsRequest{})
+	if err != nil {
+		failf("failed to list brokers on %s err=%q", broker.Addr(), err)
 	}
 
 	if resp.Err != sarama.ErrNoError {
-		errs <- fmt.Errorf("failed to list brokers on %s err=%v", broker.Addr(), resp.Err)
+		failf("failed to list brokers on %s err=%v", broker.Addr(), resp.Err)
 	}
 
 	for name := range resp.Groups {
-		results <- findGroupResult{group: name}
+		groupCh <- name
 	}
-	results <- findGroupResult{done: true}
 }
 
 func (c *groupCmd) connect(broker *sarama.Broker) error {
@@ -308,7 +281,7 @@ func (c *groupCmd) saramaConfig() *sarama.Config {
 	cfg.ClientID = "kt-group-" + CurrentUserName()
 
 	if err := c.auth.SetupAuth(cfg); err != nil {
-		log.Printf("Failed to setupAuth err=%v", err)
+		log.Printf("setupAuth: %v", err)
 	}
 
 	return cfg

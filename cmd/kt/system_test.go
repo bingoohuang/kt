@@ -86,7 +86,7 @@ func TestSystem(t *testing.T) {
 	fmt.Printf(">> ✓\n")
 	// kt produce
 
-	req := map[string]interface{}{
+	req := map[string]any{
 		"value":     fmt.Sprintf("hello, %s", randomString(6)),
 		"key":       "boom",
 		"partition": float64(0),
@@ -117,7 +117,7 @@ func TestSystem(t *testing.T) {
 	lines := strings.Split(stdOut, "\n")
 	require.True(t, len(lines) > 1)
 
-	var lastConsumed map[string]interface{}
+	var lastConsumed map[string]any
 	err = json.Unmarshal([]byte(lines[len(lines)-2]), &lastConsumed)
 	require.NoError(t, err)
 	require.Equal(t, req["value"], lastConsumed["value"])
@@ -141,7 +141,7 @@ func TestSystem(t *testing.T) {
 	fmt.Printf(">> ✓\n")
 
 	// kt produce
-	req = map[string]interface{}{
+	req = map[string]any{
 		"value":     fmt.Sprintf("hello, %s", randomString(6)),
 		"key":       "boom",
 		"partition": float64(0),
@@ -192,14 +192,14 @@ func TestSystem(t *testing.T) {
 	lines = strings.Split(stdOut, "\n")
 	require.True(t, len(lines) > 1)
 
-	var groupReset map[string]interface{}
+	var groupReset map[string]any
 	err = json.Unmarshal([]byte(lines[len(lines)-2]), &groupReset)
 	require.NoError(t, err)
 
 	require.Equal(t, groupReset["name"], "hans")
 	require.Equal(t, groupReset["topic"], topicName)
 	require.Len(t, groupReset["offsets"], 1)
-	offsets := groupReset["offsets"].([]interface{})[0].(map[string]interface{})
+	offsets := groupReset["offsets"].([]any)[0].(map[string]any)
 	require.Equal(t, offsets["partition"], float64(0))
 	require.Equal(t, offsets["Offset"], float64(0))
 

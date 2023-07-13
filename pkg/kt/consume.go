@@ -307,7 +307,7 @@ type ConsumedMessage struct {
 }
 
 type PrintMessageConsumer struct {
-	Marshal                func(v interface{}) ([]byte, error)
+	Marshal                func(v any) ([]byte, error)
 	ValEncoder, KeyEncoder BytesEncoder
 	sseSender              *SSESender
 	Grep                   *regexp.Regexp
@@ -321,7 +321,7 @@ func NewPrintMessageConsumer(pretty bool, keyEncoder, valEncoder BytesEncoder, s
 	marshal := json.Marshal
 
 	if pretty && terminal.IsTerminal(syscall.Stdout) {
-		marshal = func(i interface{}) ([]byte, error) { return json.MarshalIndent(i, "", "  ") }
+		marshal = func(i any) ([]byte, error) { return json.MarshalIndent(i, "", "  ") }
 	}
 
 	return &PrintMessageConsumer{
@@ -390,7 +390,7 @@ type sseBean struct {
 }
 
 type consumedMessage struct {
-	Value     interface{}       `json:"value,omitempty"`
+	Value     any               `json:"value,omitempty"`
 	Timestamp *time.Time        `json:"timestamp,omitempty"`
 	Headers   map[string]string `json:"headers,omitempty"`
 	Key       string            `json:"key,omitempty"`

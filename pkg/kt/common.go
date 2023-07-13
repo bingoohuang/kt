@@ -26,7 +26,7 @@ const (
 )
 
 type PrintContext struct {
-	Output     interface{}
+	Output     any
 	Done       chan struct{}
 	MessageNum int
 	ValueSize  int
@@ -88,7 +88,9 @@ func PrintOutStats(in <-chan PrintContext, pretty, stats bool) {
 	marshal := json.Marshal
 
 	if pretty && terminal.IsTerminal(syscall.Stdout) {
-		marshal = func(i interface{}) ([]byte, error) { return json.MarshalIndent(i, "", "  ") }
+		marshal = func(i any) ([]byte, error) {
+			return json.MarshalIndent(i, "", "  ")
+		}
 	}
 
 	messageNum := 0
@@ -109,7 +111,7 @@ func PrintOutStats(in <-chan PrintContext, pretty, stats bool) {
 		if !stats {
 			buf, err := marshal(ctx.Output)
 			if err != nil {
-				log.Printf("failed to marshal Output %#v, err=%v", ctx.Output, err)
+				log.Printf("E! marshal Output %#v: %v", ctx.Output, err)
 			}
 
 			fmt.Println(string(buf))

@@ -180,7 +180,7 @@ func ParseRequiredAcks(acks string) sarama.RequiredAcks {
 }
 
 type kafkaProducer interface {
-	SendMessage(msg *sarama.ProducerMessage) (interface{}, error)
+	SendMessage(msg *sarama.ProducerMessage) (any, error)
 	Start()
 	Close() error
 }
@@ -200,7 +200,7 @@ func (p *asyncProducer) Start() {
 	}
 }
 
-func (p *asyncProducer) SendMessage(msg *sarama.ProducerMessage) (interface{}, error) {
+func (p *asyncProducer) SendMessage(msg *sarama.ProducerMessage) (any, error) {
 	select {
 	case <-p.Done():
 		return AsyncProducerResult{ContextDone: true}, nil
@@ -225,7 +225,7 @@ type SyncProducerResult struct {
 	Offset    int64
 }
 
-func (p *syncProducer) SendMessage(msg *sarama.ProducerMessage) (interface{}, error) {
+func (p *syncProducer) SendMessage(msg *sarama.ProducerMessage) (any, error) {
 	partition, offset, err := p.SyncProducer.SendMessage(msg)
 	return SyncProducerResult{Partition: partition, Offset: offset}, err
 }

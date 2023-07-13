@@ -425,7 +425,7 @@ func (c *produceCmd) produceBatch(leaders map[int32]*sarama.Broker, batch []Mess
 		}
 
 		for p, o := range offsets {
-			result := map[string]interface{}{"partition": p, "startOffset": o.start, "count": o.count}
+			result := map[string]any{"partition": p, "startOffset": o.start, "count": o.count}
 			ctx := PrintContext{Output: result, Done: make(chan struct{}), MessageNum: len(batch), ValueSize: valueSize}
 			c.out <- ctx
 			<-ctx.Done

@@ -10,7 +10,9 @@ require (
 	github.com/bingoohuang/gg v0.0.0-20230510011343-87bfcf343abf
 	github.com/bingoohuang/godaemon v0.0.0-20230424004201-8d0978814fb0
 	github.com/bingoohuang/jj v0.0.0-20230423094029-a18679e37246
+	github.com/elliotchance/pie/v2 v2.7.0
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
+	github.com/samber/lo v1.38.1
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/crypto v0.9.0
 )
@@ -51,6 +53,7 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.31.0 // indirect
 	go.opentelemetry.io/otel v1.6.1 // indirect
 	go.opentelemetry.io/otel/trace v1.6.1 // indirect
+	golang.org/x/exp v0.0.0-20220321173239-a90fa8a75705 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
