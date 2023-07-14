@@ -64,7 +64,7 @@ func (c *consumeCmd) parseArgs(as []string) {
 	}
 
 	var err error
-	if conf.Topic, err = ParseTopic(a.topic); err != nil {
+	if conf.Topic, err = ParseTopic(a.topic, true); err != nil {
 		failStartup(err.Error())
 	}
 	if conf.Version, err = ParseKafkaVersion(a.version); err != nil {

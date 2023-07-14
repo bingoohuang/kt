@@ -52,7 +52,7 @@ func ParseBrokers(argBrokers string) []string {
 	return brokers
 }
 
-func ParseTopic(topic string) (string, error) {
+func ParseTopic(topic string, required bool) (string, error) {
 	if topic != "" {
 		return topic, nil
 	}
@@ -61,7 +61,11 @@ func ParseTopic(topic string) (string, error) {
 		return v, nil
 	}
 
-	return "", fmt.Errorf("topic name is required")
+	if required {
+		return "", fmt.Errorf("topic name is required")
+	}
+
+	return "", nil
 }
 
 func ParseKafkaVersion(s string) (sarama.KafkaVersion, error) {

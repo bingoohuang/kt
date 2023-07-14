@@ -92,7 +92,7 @@ func (c *groupCmd) run(args []string) {
 		parts := c.partitions
 		if len(parts) == 0 {
 			parts = c.fetchPartitions(topic)
-			log.Printf("found %d partitions %s for topic%s", len(parts), ColorJSON(parts), topic)
+			log.Printf("found %d partitions %s for topic %s", len(parts), ColorJSON(parts), topic)
 		}
 		topicPartitions[topic] = parts
 	}
@@ -297,7 +297,7 @@ func (c *groupCmd) parseArgs(as []string) {
 	var err error
 
 	a := c.parseFlags(as)
-	c.topic = getKtTopic(a.topic)
+	c.topic = getKtTopic(a.topic, false)
 	c.group = a.group
 	c.verbose = a.verbose
 	c.pretty = a.pretty

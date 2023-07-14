@@ -81,7 +81,7 @@ func (c *produceCmd) read(as []string) produceArgs {
 
 func (c *produceCmd) parseArgs(as []string) {
 	a := c.read(as)
-	c.topic = getKtTopic(a.topic)
+	c.topic = getKtTopic(a.topic, true)
 
 	if err := c.auth.ReadConfigFile(a.auth); err != nil {
 		failStartup(err.Error())

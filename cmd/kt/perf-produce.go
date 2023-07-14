@@ -345,7 +345,7 @@ kt perf-produce -brokers=kafka:9092
 	}
 
 	p.brokers = kt.ParseBrokers(p.flagBrokers)
-	if p.topic, err = kt.ParseTopic(p.topic); err != nil {
+	if p.topic, err = kt.ParseTopic(p.topic, true); err != nil {
 		failStartup(err.Error())
 	}
 

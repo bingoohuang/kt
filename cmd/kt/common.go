@@ -14,8 +14,8 @@ import (
 	. "github.com/bingoohuang/kt/pkg/kt"
 )
 
-func getKtTopic(v string) string {
-	topic, err := ParseTopic(v)
+func getKtTopic(v string, required bool) string {
+	topic, err := ParseTopic(v, required)
 	if err != nil {
 		failStartup(err.Error())
 	}
