@@ -25,6 +25,7 @@ type groupCmd struct {
 	auth         AuthConfig
 	group        string
 	topic        string
+	tags         string
 	partitions   []int32
 	brokers      []string
 	version      sarama.KafkaVersion
@@ -60,23 +61,22 @@ func (c *groupCmd) run(args []string) {
 	if c.group == "" {
 		groups = pie.Of(c.findGroups(brokers)).Filter(c.filterGroups.MatchString).Result
 		groups = lo.Uniq(groups)
+		log.Printf("found %d groups: %s", len(groups), ColorJSON(groups))
 	}
-
-	log.Printf("found %d groups: %s", len(groups), ColorJSON(groups))
 
 	topics := []string{c.topic}
 	if c.topic == "" {
 		topics = pie.Of(c.fetchTopics()).Filter(c.filterTopics.MatchString).Result
 		topics = lo.Uniq(topics)
+		log.Printf("found %d topics: %s", len(topics), ColorJSON(topics))
 	}
-	log.Printf("found %d topics: %s", len(topics), ColorJSON(topics))
 
 	c.out = make(chan PrintContext)
 	go PrintOut(c.out, c.pretty)
 
 	if !c.offsets {
 		for i, group := range groups {
-			ctx := PrintContext{Output: GroupInfo{Name: group}, Done: make(chan struct{})}
+			ctx := PrintContext{Output: GroupInfo{Group: group}, Done: make(chan struct{})}
 			c.out <- ctx
 			<-ctx.Done
 
@@ -111,7 +111,7 @@ func (c *groupCmd) run(args []string) {
 }
 
 func (c *groupCmd) printGroupTopicOffset(group, topic string, partitions []int32) {
-	target := GroupInfo{Name: group, Topic: topic, Offsets: make([]GroupOffset, 0, len(partitions))}
+	target := GroupInfo{Group: group, Topic: topic, Offsets: make([]GroupOffset, 0, len(partitions))}
 	results := make(chan GroupOffset)
 
 	wg := &sync.WaitGroup{}
@@ -141,7 +141,7 @@ func (c *groupCmd) printGroupTopicOffset(group, topic string, partitions []int32
 func (c *groupCmd) resolveOffset(top string, part int32, off int64) int64 {
 	resolvedOff, err := c.client.GetOffset(top, part, off)
 	if err != nil {
-		failf("get Offset to reset to for partition=%d: %v", part, err)
+		failf("get Offset for partition=%d: %v", part, err)
 	}
 
 	if c.verbose {
@@ -170,7 +170,7 @@ func (c *groupCmd) fetchGroupOffset(group, topic string, part int32, results cha
 
 	specialOffset := c.reset == sarama.OffsetNewest || c.reset == sarama.OffsetOldest
 
-	groupOff, _ := pom.NextOffset()
+	groupOff, metadata := pom.NextOffset()
 	if c.reset >= 0 || specialOffset {
 		resolvedOff := c.reset
 		if specialOffset {
@@ -193,7 +193,10 @@ func (c *groupCmd) fetchGroupOffset(group, topic string, part int32, results cha
 
 	partOff := c.resolveOffset(topic, part, sarama.OffsetNewest)
 	lag := partOff - groupOff
-	results <- GroupOffset{Partition: part, Offset: &groupOff, Lag: &lag}
+
+	if groupOff > 0 || strings.Contains(c.tags, "allOffSets") {
+		results <- GroupOffset{Partition: part, PartitionOffset: partOff, GroupOffset: groupOff, Lag: lag, Metadata: metadata}
+	}
 }
 
 func (c *groupCmd) fetchTopics() []string {
@@ -302,6 +305,7 @@ func (c *groupCmd) parseArgs(as []string) {
 	c.verbose = a.verbose
 	c.pretty = a.pretty
 	c.offsets = a.offsets
+	c.tags = a.tags
 	c.version = kafkaVersion(a.version)
 	if err := c.auth.ReadConfigFile(a.auth); err != nil {
 		failStartup(err.Error())
@@ -359,6 +363,7 @@ func (c *groupCmd) parseArgs(as []string) {
 }
 
 type groupArgs struct {
+	tags         string
 	topic        string
 	brokers      string
 	auth         string
@@ -387,7 +392,8 @@ func (c *groupCmd) parseFlags(as []string) groupArgs {
 	f.BoolVar(&a.pretty, "pretty", false, "Control Output pretty printing.")
 	f.StringVar(&a.version, "version", "", fmt.Sprintf("Kafka protocol version, like 0.10.0.0, or env %s", EnvVersion))
 	f.StringVar(&a.partitions, "partitions", allPartitionsHuman, "comma separated list of partitions to limit offsets to, or all")
-	f.BoolVar(&a.offsets, "offsets", true, "Controls if offsets should be fetched (defauls to true)")
+	f.StringVar(&a.tags, "tags", "", "available tags: allOffSets")
+	f.BoolVar(&a.offsets, "offsets", true, "Controls if offsets should be fetched (defaults to true)")
 
 	f.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage of group:")

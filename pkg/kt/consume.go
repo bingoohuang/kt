@@ -254,13 +254,13 @@ func (c *Consumer) partitionLoop(pc sarama.PartitionConsumer, p int32, end int64
 				return
 			}
 
-			ctx := ConsumedContext{Message: msg, Done: make(chan struct{})}
-			c.out <- ctx
-			<-ctx.Done
-
 			if pom != nil {
 				pom.MarkOffset(msg.Offset+1, "")
 			}
+
+			ctx := ConsumedContext{Message: msg, Done: make(chan struct{})}
+			c.out <- ctx
+			<-ctx.Done
 
 			if end > 0 && msg.Offset >= end {
 				return

@@ -1,13 +1,15 @@
 package kt
 
 type GroupInfo struct {
-	Name    string        `json:"name"`
+	Group   string        `json:"group"`
 	Topic   string        `json:"topic,omitempty"`
 	Offsets []GroupOffset `json:"offsets,omitempty"`
 }
 
 type GroupOffset struct {
-	Offset    *int64 `json:"offset"`
-	Lag       *int64 `json:"lag"`
-	Partition int32  `json:"partition"`
+	Metadata        string `json:"metadata,omitempty"`
+	GroupOffset     int64  `json:"groupOffset"`
+	PartitionOffset int64  `json:"partitionOffset"`
+	Lag             int64  `json:"lag"`
+	Partition       int32  `json:"partition"`
 }
