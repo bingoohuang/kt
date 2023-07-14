@@ -424,7 +424,7 @@ func (p *perfProduceCmd) generateMessages(messageLoad int) []*sarama.ProducerMes
 		switch {
 
 		case p.jsonTemplate != "":
-			randJSON, _ := gen.Process(p.jsonTemplate)
+			randJSON, _, _ := gen.Process(p.jsonTemplate)
 			pm.Value = sarama.StringEncoder(randJSON.Out)
 		case p.messageBinary:
 			payload := make([]byte, p.messageSize)

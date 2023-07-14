@@ -53,7 +53,8 @@ func (c *groupCmd) run(args []string) {
 	}
 
 	brokers := c.client.Brokers()
-	log.Printf("found %v brokers", len(brokers))
+	log.Printf("found %v brokers: %s", len(brokers),
+		ColorJSON(pie.Map(brokers, func(b *sarama.Broker) string { return b.Addr() })))
 
 	groups := []string{c.group}
 	if c.group == "" {
@@ -61,14 +62,14 @@ func (c *groupCmd) run(args []string) {
 		groups = lo.Uniq(groups)
 	}
 
-	log.Printf("found %d groups: %v", len(groups), groups)
+	log.Printf("found %d groups: %s", len(groups), ColorJSON(groups))
 
 	topics := []string{c.topic}
 	if c.topic == "" {
 		topics = pie.Of(c.fetchTopics()).Filter(c.filterTopics.MatchString).Result
 		topics = lo.Uniq(topics)
 	}
-	log.Printf("found %d topics: %v", len(topics), topics)
+	log.Printf("found %d topics: %s", len(topics), ColorJSON(topics))
 
 	c.out = make(chan PrintContext)
 	go PrintOut(c.out, c.pretty)
@@ -91,7 +92,7 @@ func (c *groupCmd) run(args []string) {
 		parts := c.partitions
 		if len(parts) == 0 {
 			parts = c.fetchPartitions(topic)
-			log.Printf("found partitions=%v for topic=%v\n", parts, topic)
+			log.Printf("found %d partitions %s for topic%s", len(parts), ColorJSON(parts), topic)
 		}
 		topicPartitions[topic] = parts
 	}

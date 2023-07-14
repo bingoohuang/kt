@@ -7,9 +7,9 @@ require (
 	github.com/Shopify/sarama v1.38.1
 	github.com/ThreeDotsLabs/watermill v1.2.0
 	github.com/ThreeDotsLabs/watermill-kafka/v2 v2.2.2
-	github.com/bingoohuang/gg v0.0.0-20230510011343-87bfcf343abf
+	github.com/bingoohuang/gg v0.0.0-20230629095648-3af2bb83aab6
 	github.com/bingoohuang/godaemon v0.0.0-20230424004201-8d0978814fb0
-	github.com/bingoohuang/jj v0.0.0-20230423094029-a18679e37246
+	github.com/bingoohuang/jj v0.0.0-20230629100021-06a968677112
 	github.com/elliotchance/pie/v2 v2.7.0
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/samber/lo v1.38.1
@@ -19,10 +19,10 @@ require (
 
 require (
 	github.com/Pallinder/go-randomdata v1.2.0 // indirect
-	github.com/bingoohuang/jiami v0.0.0-20221122064658-cdd6a948124e // indirect
+	github.com/bingoohuang/jiami v0.0.0-20221123002830-d9d1f5f029b4 // indirect
 	github.com/cristalhq/base64 v0.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dustin/go-humanize v1.0.0 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eapache/go-resiliency v1.3.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230111030713-bf00bc1b83b6 // indirect
 	github.com/eapache/queue v1.1.0 // indirect

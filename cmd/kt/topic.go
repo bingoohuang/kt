@@ -11,6 +11,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	. "github.com/bingoohuang/kt/pkg/kt"
+	"github.com/elliotchance/pie/v2"
 )
 
 type topicArgs struct {
@@ -152,12 +153,7 @@ func (r *topicCmd) run(as []string) {
 		failf("failed to read topics err=%v", err)
 	}
 
-	var topics []string
-	for _, a := range all {
-		if r.filter.MatchString(a) {
-			topics = append(topics, a)
-		}
-	}
+	topics := pie.Of(all).Filter(r.filter.MatchString).Result
 
 	r.out = make(chan PrintContext)
 	go PrintOut(r.out, r.pretty)
@@ -176,7 +172,7 @@ func (r *topicCmd) run(as []string) {
 func (r *topicCmd) print(name string) {
 	top, err := r.readTopic(name)
 	if err != nil {
-		log.Printf("failed to read info for topic %s. err=%v", name, err)
+		log.Printf("E! read info for topic %s: %v", name, err)
 		return
 	}
 

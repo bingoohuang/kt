@@ -14,6 +14,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/bingoohuang/gg/pkg/man"
+	"github.com/bingoohuang/jj"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -114,7 +115,7 @@ func PrintOutStats(in <-chan PrintContext, pretty, stats bool) {
 				log.Printf("E! marshal Output %#v: %v", ctx.Output, err)
 			}
 
-			fmt.Println(string(buf))
+			fmt.Println(string(jj.Color(buf, nil, nil)))
 		}
 		close(ctx.Done)
 	}
