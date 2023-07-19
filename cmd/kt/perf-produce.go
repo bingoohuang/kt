@@ -14,8 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Shopify/sarama"
-	"github.com/Shopify/sarama/tools/tls"
+	"github.com/IBM/sarama"
+	"github.com/IBM/sarama/tools/tls"
 	"github.com/bingoohuang/gg/pkg/fla9"
 	"github.com/bingoohuang/gg/pkg/randx"
 	"github.com/bingoohuang/jj"
@@ -23,7 +23,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-// from https://github.com/Shopify/sarama/blob/main/tools/kafka-producer-performance/main.go
+// from https://github.com/IBM/sarama/blob/main/tools/kafka-producer-performance/main.go
 
 type perfProduceCmd struct {
 	tlsClientCert    string

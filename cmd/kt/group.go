@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	. "github.com/bingoohuang/kt/pkg/kt"
 	"github.com/elliotchance/pie/v2"
 	"github.com/samber/lo"
@@ -417,7 +417,7 @@ The values supplied on the command line win over environment variable values.
 
 The group command can be used to list groups, their offsets and lag and to reset a group's Offset.
 
-When an explicit Offset hasn't been set yet, kt prints out the respective sarama constants, cf. https://godoc.org/github.com/Shopify/sarama#pkg-constants
+When an explicit Offset hasn't been set yet, kt prints out the respective sarama constants, cf. https://godoc.org/github.com/IBM/sarama#pkg-constants
 
 To simply list all groups:
 

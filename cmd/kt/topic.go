@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	. "github.com/bingoohuang/kt/pkg/kt"
 	"github.com/elliotchance/pie/v2"
 )

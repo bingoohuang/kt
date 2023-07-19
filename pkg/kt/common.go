@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/bingoohuang/gg/pkg/man"
 	"github.com/bingoohuang/jj"
 	"golang.org/x/crypto/ssh/terminal"

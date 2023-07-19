@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/bingoohuang/gg/pkg/fla9"
 	"github.com/bingoohuang/gg/pkg/randx"
 	. "github.com/bingoohuang/kt/pkg/kt"
@@ -32,7 +32,7 @@ type kissProducer struct {
 }
 
 // help links:
-// https://github.com/Shopify/sarama/blob/main/tools/kafka-producer-performance/main.go
+// https://github.com/IBM/sarama/blob/main/tools/kafka-producer-performance/main.go
 
 func (p *kissProducer) run(args []string) {
 	p.parseArgs(args)

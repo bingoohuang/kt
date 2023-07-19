@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/bingoohuang/jj"
 	. "github.com/bingoohuang/kt/pkg/kt"
 )

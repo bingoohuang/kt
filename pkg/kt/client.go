@@ -1,7 +1,7 @@
 package kt
 
 import (
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 )
 
 type Client struct {

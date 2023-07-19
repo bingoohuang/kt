@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/bingoohuang/gg/pkg/fla9"
 	. "github.com/bingoohuang/kt/pkg/kt"
 )

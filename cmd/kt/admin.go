@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	. "github.com/bingoohuang/kt/pkg/kt"
 )
 
@@ -192,7 +192,7 @@ The value for -brokers can also be set via environment variables %s.
 The value supplied on the command line wins over the environment variable value.
 
 The topic details should be passed via a JSON file that represents a sarama.TopicDetail struct.
-cf https://godoc.org/github.com/Shopify/sarama#TopicDetail
+cf https://godoc.org/github.com/IBM/sarama#TopicDetail
 
 A simple way to pass a JSON file is to use a tool like https://github.com/fgeller/jsonify and shell's process substition:
 
