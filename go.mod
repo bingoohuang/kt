@@ -6,6 +6,7 @@ require (
 	github.com/AndrewBurian/eventsource v2.1.0+incompatible
 	github.com/IBM/sarama v1.40.0
 	github.com/bingoohuang/gg v0.0.0-20230629095648-3af2bb83aab6
+	github.com/bingoohuang/godaemon v0.0.0-20230707135107-08ddcb884db5
 	github.com/bingoohuang/jj v0.0.0-20230719014638-25b92380d3ed
 	github.com/elliotchance/pie/v2 v2.7.0
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
@@ -32,6 +33,7 @@ require (
 	github.com/jcmturner/gofork v1.7.6 // indirect
 	github.com/jcmturner/gokrb5/v8 v8.4.3 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
+	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/klauspost/compress v1.15.14 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

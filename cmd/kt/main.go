@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/bingoohuang/gg/pkg/v"
+	_ "github.com/bingoohuang/godaemon/autoload"
 	. "github.com/bingoohuang/kt/pkg/kt"
 )
 
