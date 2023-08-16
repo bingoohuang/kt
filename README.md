@@ -3,13 +3,17 @@
 ## kt 使用简介
 
 1. 通用设置 brokers 和 topic
-    1. 通过环境变量 `export KT_BROKERS=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092; export KT_TOPIC=elastic.backup`
-    2. 通过命令参数 `kt tail -brokers=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092 -topic elastic.backup`，不方便的是，导致命令过长，每次执行，都得带上这两个参数
+    1.
+   通过环境变量 `export KT_BROKERS=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092; export KT_TOPIC=elastic.backup`
+    2. 通过命令参数 `kt tail -brokers=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092 -topic elastic.backup`
+       ，不方便的是，导致命令过长，每次执行，都得带上这两个参数
 2. 消费最新消息 `kt tail`
 3. 生产消息
-    1. 直接消息：`echo '你要发送的消息载荷' |  kt produce -literal`
-    2. 指定 key 和 partition ，`echo '{"key": "id-23", "value": "消息载荷", "partition": 0}' | kt produce -topic greetings`
-    3. 使用 JJ 命令生成随机消息：`JJ_N=3 jj -gu a=@姓名 b=@汉字 c=@性别 d=@地址 e=@手机 f=@身份证 g=@发证机关 h=@邮箱 i=@银行卡 j=@name k=@ksuid l=@objectId m='@random(男,女)' n='@random_int(20-60)' o='@random_time(yyyy-MM-dd)' p=@random_bool q='@regex([a-z]{5}@xyz[.]cn)' |  kt produce -literal`
+    1. 直接消息：`echo '你要发送的消息载荷' | kt produce -literal`
+    2. 指定 key 和
+       partition ，`echo '{"key": "id-23", "value": "消息载荷", "partition": 0}' | kt produce -topic greetings`
+    3. 使用 JJ
+       命令生成随机消息：`JJ_N=3 jj -gu a=@姓名 b=@汉字 c=@性别 d=@地址 e=@手机 f=@身份证 g=@发证机关 h=@邮箱 i=@银行卡 j=@name k=@ksuid l=@objectId m='@random(男,女)' n='@random_int(20-60)' o='@random_time(yyyy-MM-dd)' p=@random_bool q='@regex([a-z]{5}@xyz[.]cn)' | kt produce -literal`
     4. 从文件中读取,每一行作为一个消息： `cat p20w.txt | kt produce -literal -stats`
 4. 生产消息性能压测
     1. 随机字符串写入压测 `kt perf`
@@ -47,7 +51,8 @@ Some reasons why you might be interested:
 * Consume messages on specific partitions between specific offsets.
 * Display topic information (e.g., with partition offset and leader info).
 * Modify consumer group offsets (e.g., resetting or manually setting offsets per topic and per partition).
-* JSON output for easy consumption with tools like [kp](https://github.com/echojc/kp) or [jq](https://stedolan.github.io/jq/).
+* JSON output for easy consumption with tools like [kp](https://github.com/echojc/kp)
+  or [jq](https://stedolan.github.io/jq/).
 * JSON input to facilitate automation via tools like [jsonify](https://github.com/fgeller/jsonify).
 * Configure brokers, topic and authentication via environment variables `KT_BROKERS`, `KT_TOPIC` and `KT_AUTH`.
 * Fast start up time.
@@ -56,7 +61,8 @@ Some reasons why you might be interested:
 * Support for TLS authentication.
 * Basic cluster admin functions: Create & delete topics.
 
-I'm not using kt actively myself anymore, so if you think it's lacking some feature - please let me know by creating an issue!
+I'm not using kt actively myself anymore, so if you think it's lacking some feature - please let me know by creating an
+issue!
 
 ## Examples
 
@@ -75,6 +81,7 @@ $ kt topic -filter news -partitions
   ]
 }
 ```
+
 </details>
 
 <details><summary>Produce messages</summary>
@@ -114,6 +121,7 @@ $ for i in {6..9} ; do echo Bourne sequel $i in production. | kt produce -topic 
   "startOffset": 4
 }
 ```
+
 </details>
 
 <details><summary>Or pass in JSON object to control key, value and partition</summary>
@@ -126,6 +134,7 @@ $ echo '{"value": "Terminator terminated", "key": "Arni", "partition": 0}' | kt 
   "startOffset": 5
 }
 ```
+
 </details>
 
 <details><summary>Read messages at specific offsets on specific partitions</summary>
@@ -147,6 +156,7 @@ $ kt consume -topic actor-news -offsets 0=1:2
   "timestamp": "1970-01-01T00:59:59.999+01:00"
 }
 ```
+
 </details>
 
 <details><summary>Follow a topic, starting relative to newest offset</summary>
@@ -170,6 +180,7 @@ $ kt consume -topic actor-news -offsets all=newest-1:
 ^Creceived interrupt - shutting down
 shutting down partition consumer for partition 0
 ```
+
 </details>
 
 <details><summary>View offsets for a given consumer group</summary>
@@ -190,6 +201,7 @@ found 1 topics
   ]
 }
 ```
+
 </details>
 
 <details><summary>Change consumer group offset</summary>
@@ -224,6 +236,7 @@ found 1 topics
   ]
 }
 ```
+
 </details>
 
 <details><summary>Create and delete a topic</summary>
@@ -304,13 +317,12 @@ each command individually, or set it via the environment variable `KT_AUTH`.
 
 Required fields:
 
- - `mode`: This needs to be set to `TLS`
- - `client-cert`: Path to your certificate
- - `client-cert-key`: Path to your certificate key
- - `ca-cert`: Path to your CA certificate
+- `mode`: This needs to be set to `TLS`
+- `client-cert`: Path to your certificate
+- `client-cert-key`: Path to your certificate key
+- `ca-cert`: Path to your CA certificate
 
 Example for an authorization configuration that is used for the system tests:
-
 
     {
         "mode": "TLS",
@@ -323,19 +335,24 @@ Example for an authorization configuration that is used for the system tests:
 
 Required fields:
 
- - `mode`: This needs to be set to `TLS-1way`
+- `mode`: This needs to be set to `TLS-1way`
 
 Example:
-
 
     {
         "mode": "TLS-1way",
     }
 
-### Other modes
-
-Please create an [issue](https://github.com/bingoohuang/kt/issues/new) with details for the mode that you need.
-
-### handy scripts
+## handy scripts
 
 1. `kt consume -brokers 192.168.18.14:9092 -topic metrics -version 0.10.0.0`
+
+## relative resources
+
+1. [segmentio/kafka-go](https://github.com/segmentio/kafka-go) It provides both low and high level APIs for interacting
+   with Kafka, mirroring concepts and implementing interfaces of the Go standard library to make it easy to use and
+   integrate with existing software.
+2. [Go go-queue 库实现 kafka 的发布/订阅](https://mp.weixin.qq.com/s/x1KIbn9NeLyKTISzWCPIdA), go-queue
+   库是由 [go-zero](https://github.com/zeromicro/go-zero) 团队针对于消息队列的封装，目前支持
+   kafka、rabbitmq、stan、beanstalkd等。
+3. [Watermill Kafka Pub/Sub](https://github.com/ThreeDotsLabs/watermill-kafka) Kafka Pub/Sub for the Watermill project.
