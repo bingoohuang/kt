@@ -4,7 +4,7 @@ go 1.21.0
 
 require (
 	github.com/AndrewBurian/eventsource v2.1.0+incompatible
-	github.com/IBM/sarama v1.41.1
+	github.com/IBM/sarama v1.41.2
 	github.com/bingoohuang/gg v0.0.0-20230905014901-c159304e8efe
 	github.com/bingoohuang/godaemon v0.0.0-20230707135107-08ddcb884db5
 	github.com/bingoohuang/jj v0.0.0-20230905015140-0c2eead890b4
@@ -34,7 +34,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
-	github.com/klauspost/compress v1.16.7 // indirect
+	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pbnjay/pixfont v0.0.0-20200714042608-33b744692567 // indirect

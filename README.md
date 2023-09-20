@@ -3,9 +3,8 @@
 ## kt 使用简介
 
 1. 通用设置 brokers 和 topic
-    1.
-   通过环境变量 `export KT_BROKERS=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092; export KT_TOPIC=elastic.backup`
-    2. 通过命令参数 `kt tail -brokers=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092 -topic elastic.backup`
+    1. 环境变量 `export KT_BROKERS=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092; export KT_TOPIC=elastic.backup`
+    2. 命令参数 `kt tail -brokers=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092 -topic elastic.backup`
        ，不方便的是，导致命令过长，每次执行，都得带上这两个参数
 2. 消费最新消息 `kt tail`
 3. 生产消息
