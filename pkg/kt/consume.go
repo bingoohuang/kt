@@ -16,7 +16,7 @@ import (
 	"github.com/bingoohuang/gg/pkg/jsoni"
 	"github.com/bingoohuang/gg/pkg/man"
 	"github.com/bingoohuang/jj"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 type Consumer struct {
@@ -320,7 +320,7 @@ func NewPrintMessageConsumer(pretty bool, keyEncoder, valEncoder BytesEncoder, s
 ) *PrintMessageConsumer {
 	marshal := json.Marshal
 
-	if pretty && terminal.IsTerminal(syscall.Stdout) {
+	if pretty && term.IsTerminal(syscall.Stdout) {
 		marshal = func(i any) ([]byte, error) { return json.MarshalIndent(i, "", "  ") }
 	}
 

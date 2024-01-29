@@ -15,7 +15,7 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/bingoohuang/gg/pkg/man"
 	"github.com/bingoohuang/jj"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 const (
@@ -92,7 +92,7 @@ func PrintOut(in <-chan PrintContext, pretty bool) {
 func PrintOutStats(in <-chan PrintContext, pretty, stats bool) {
 	marshal := json.Marshal
 
-	if pretty && terminal.IsTerminal(syscall.Stdout) {
+	if pretty && term.IsTerminal(syscall.Stdout) {
 		marshal = func(i any) ([]byte, error) {
 			return json.MarshalIndent(i, "", "  ")
 		}

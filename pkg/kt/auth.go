@@ -4,8 +4,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/IBM/sarama"
@@ -18,6 +18,7 @@ type AuthConfig struct {
 	ClientCertKey string `json:"client-cert-key"`
 	SASLUsr       string `json:"sasl-usr"`
 	SASLPwd       string `json:"sasl-pwd"`
+	SASLVersion   *int   `json:"sasl-version"`
 }
 
 func (t *AuthConfig) ReadConfigFile(fileName string) error {
@@ -62,7 +63,32 @@ func (t AuthConfig) setupSASL(sc *sarama.Config) error {
 	sc.Net.SASL.Enable = true
 	sc.Net.SASL.User = t.SASLUsr
 	sc.Net.SASL.Password = t.SASLPwd
+	sc.Net.SASL.Handshake = true
+	sc.Net.SASL.Mechanism = sarama.SASLTypePlaintext
+	version, err := SASLVersion(sc.Version, t.SASLVersion)
+	if err != nil {
+		return err
+	}
+	sc.Net.SASL.Version = version
 	return nil
+}
+
+func SASLVersion(kafkaVersion sarama.KafkaVersion, saslVersion *int) (int16, error) {
+	if saslVersion == nil {
+		if kafkaVersion.IsAtLeast(sarama.V1_0_0_0) {
+			return sarama.SASLHandshakeV1, nil
+		}
+		return sarama.SASLHandshakeV0, nil
+	}
+
+	switch *saslVersion {
+	case 0:
+		return sarama.SASLHandshakeV0, nil
+	case 1:
+		return sarama.SASLHandshakeV1, nil
+	default:
+		return 0, errors.New("invalid SASL version")
+	}
 }
 
 func (t AuthConfig) setupAuthTLS1Way(sc *sarama.Config) error {
@@ -88,7 +114,7 @@ func createTLSConfig(caCert, clientCert, certKey string) (*tls.Config, error) {
 		return nil, fmt.Errorf("a-cert, client-cert and client-key are required")
 	}
 
-	caString, err := ioutil.ReadFile(caCert)
+	caString, err := os.ReadFile(caCert)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read ca-cert err=%v", err)
 	}
