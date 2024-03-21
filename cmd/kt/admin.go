@@ -100,10 +100,10 @@ type TopicDetail struct {
 // ToSaramaTopicDetail convert to *sarama.TopicDetail.
 func (r *TopicDetail) ToSaramaTopicDetail() *sarama.TopicDetail {
 	d := &sarama.TopicDetail{}
-	d.NumPartitions = FirstNotNilInt32(r.NumPartitions, r.NumPartitions2, r.NumPartitions3)
-	d.ReplicationFactor = FirstNotNilInt16(r.ReplicationFactor, r.ReplicationFactor2, r.ReplicationFactor3)
-	d.ReplicaAssignment = FirstNotNilMapInt32(r.ReplicaAssignment, r.ReplicaAssignment2, r.ReplicaAssignment3)
-	d.ConfigEntries = FirstNotNilMapString(r.ConfigEntries, r.ConfigEntries2, r.ConfigEntries3)
+	d.NumPartitions = FirstNotNil(r.NumPartitions, r.NumPartitions2, r.NumPartitions3)
+	d.ReplicationFactor = FirstNotNil(r.ReplicationFactor, r.ReplicationFactor2, r.ReplicationFactor3)
+	d.ReplicaAssignment = FirstNotNil(r.ReplicaAssignment, r.ReplicaAssignment2, r.ReplicaAssignment3)
+	d.ConfigEntries = FirstNotNil(r.ConfigEntries, r.ConfigEntries2, r.ConfigEntries3)
 
 	return d
 }

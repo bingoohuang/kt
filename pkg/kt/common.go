@@ -14,6 +14,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/bingoohuang/gg/pkg/man"
+	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/jj"
 	"golang.org/x/term"
 )
@@ -35,11 +36,7 @@ type PrintContext struct {
 
 func ParseBrokers(argBrokers string) []string {
 	if argBrokers == "" {
-		if v := os.Getenv(EnvBrokers); v != "" {
-			argBrokers = v
-		} else {
-			argBrokers = "localhost:9092"
-		}
+		argBrokers = ss.Or(os.Getenv(EnvBrokers), "localhost:9092")
 	}
 
 	brokers := strings.Split(argBrokers, ",")
@@ -132,58 +129,15 @@ func LogClose(name string, c io.Closer) {
 }
 
 // FirstNotNil returns the first non-nil string.
-func FirstNotNil(a ...*string) string {
+func FirstNotNil[T any](a ...*T) T {
 	for _, i := range a {
 		if i != nil {
 			return *i
 		}
 	}
 
-	return ""
-}
-
-// FirstNotNilInt16 returns the first non-nil string.
-func FirstNotNilInt16(a ...*int16) int16 {
-	for _, i := range a {
-		if i != nil {
-			return *i
-		}
-	}
-
-	return 0
-}
-
-// FirstNotNilInt32 returns the first non-nil string.
-func FirstNotNilInt32(a ...*int32) int32 {
-	for _, i := range a {
-		if i != nil {
-			return *i
-		}
-	}
-
-	return 0
-}
-
-// FirstNotNilMapInt32 returns the first non-nil string.
-func FirstNotNilMapInt32(a ...*map[int32][]int32) map[int32][]int32 {
-	for _, i := range a {
-		if i != nil {
-			return *i
-		}
-	}
-
-	return nil
-}
-
-// FirstNotNilMapString returns the first non-nil string.
-func FirstNotNilMapString(a ...*map[string]*string) map[string]*string {
-	for _, i := range a {
-		if i != nil {
-			return *i
-		}
-	}
-
-	return nil
+	var zero T
+	return zero
 }
 
 func CurrentUserName() string {
