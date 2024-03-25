@@ -13,12 +13,12 @@ import (
 
 type AuthConfig struct {
 	Mode          string `json:"mode"`
-	CACert        string `json:"ca-cert"`
-	ClientCert    string `json:"client-cert"`
-	ClientCertKey string `json:"client-cert-key"`
-	SASLUsr       string `json:"sasl-usr"`
-	SASLPwd       string `json:"sasl-pwd"`
-	SASLVersion   *int   `json:"sasl-version"`
+	CACert        string `json:"ca"`
+	ClientCert    string `json:"cert"`
+	ClientCertKey string `json:"key"`
+	SASLUsr       string `json:"usr"`
+	SASLPwd       string `json:"pwd"`
+	SASLVersion   *int   `json:"ver"`
 }
 
 func (t *AuthConfig) ReadConfigFile(fileName string) error {
@@ -32,9 +32,13 @@ func (t *AuthConfig) ReadConfigFile(fileName string) error {
 		fn = envFileName
 	}
 
-	data, err := os.ReadFile(fn)
-	if err != nil {
-		return fmt.Errorf("failed to read auth file, error %q", err)
+	data := []byte(fn)
+
+	if _, err := os.Stat(fn); err == nil {
+		data, err = os.ReadFile(fn)
+		if err != nil {
+			return fmt.Errorf("failed to read auth file, error %q", err)
+		}
 	}
 
 	if err := json.Unmarshal(data, t); err != nil {
