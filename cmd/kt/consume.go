@@ -25,7 +25,7 @@ type consumeCmd struct {
 func (c *consumeCmd) run(args []string) {
 	c.parseArgs(args)
 	if _, err := StartConsume(c.conf); err != nil {
-		failStartup(err.Error())
+		failStartup(err)
 	}
 }
 
@@ -45,9 +45,11 @@ type consumeArgs struct {
 	verbose, pretty bool
 }
 
-func failStartup(msg string) {
-	log.Print(msg)
-	failf(`"use "kt command -help" for more information"`)
+func failStartup(err error) {
+	if err != nil {
+		log.Print(err.Error())
+		failf(`"use "kt command -help" for more information"`)
+	}
 }
 
 func (c *consumeCmd) parseArgs(as []string) {
@@ -62,15 +64,14 @@ func (c *consumeCmd) parseArgs(as []string) {
 	}
 
 	var err error
-	if conf.Topic, err = ParseTopic(a.topic, true); err != nil {
-		failStartup(err.Error())
-	}
-	if conf.Version, err = ParseKafkaVersion(a.version); err != nil {
-		failStartup(err.Error())
-	}
-	if err = conf.Auth.ReadConfigFile(a.auth); err != nil {
-		failStartup(err.Error())
-	}
+	conf.Topic, err = ParseTopic(a.topic, true)
+	failStartup(err)
+
+	conf.Version, err = ParseKafkaVersion(a.version)
+	failStartup(err)
+
+	err = conf.Auth.ReadConfigFile(a.auth)
+	failStartup(err)
 
 	valEncoder := ParseBytesEncoder(a.encVal)
 	keyEncoder := ParseBytesEncoder(a.encKey)

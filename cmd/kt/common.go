@@ -17,7 +17,7 @@ import (
 func getKtTopic(v string, required bool) string {
 	topic, err := ParseTopic(v, required)
 	if err != nil {
-		failStartup(err.Error())
+		failStartup(err)
 	}
 
 	return topic
@@ -26,7 +26,7 @@ func getKtTopic(v string, required bool) string {
 func kafkaVersion(v string) sarama.KafkaVersion {
 	version, err := ParseKafkaVersion(v)
 	if err != nil {
-		failStartup(err.Error())
+		failStartup(err)
 	}
 
 	return version

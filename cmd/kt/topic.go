@@ -102,9 +102,8 @@ func (r *topicCmd) parseArgs(as []string) {
 		failf("invalid regex for filter err=%s", err)
 	}
 
-	if err := r.auth.ReadConfigFile(a.auth); err != nil {
-		failStartup(err.Error())
-	}
+	err = r.auth.ReadConfigFile(a.auth)
+	failStartup(err)
 
 	r.filter = re
 	r.partitions = a.partitions

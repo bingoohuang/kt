@@ -307,9 +307,8 @@ func (c *groupCmd) parseArgs(as []string) {
 	c.offsets = a.offsets
 	c.tags = a.tags
 	c.version = kafkaVersion(a.version)
-	if err := c.auth.ReadConfigFile(a.auth); err != nil {
-		failStartup(err.Error())
-	}
+	c.auth.ReadConfigFile(a.auth)
+	failStartup(err)
 
 	switch a.partitions {
 	case "", "all":

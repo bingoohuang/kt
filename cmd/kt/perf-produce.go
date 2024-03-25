@@ -345,9 +345,8 @@ kt perf-produce -brokers=kafka:9092
 	}
 
 	p.brokers = kt.ParseBrokers(p.flagBrokers)
-	if p.topic, err = kt.ParseTopic(p.topic, true); err != nil {
-		failStartup(err.Error())
-	}
+	p.topic, err = kt.ParseTopic(p.topic, true)
+	failStartup(err)
 
 	if p.messageLoad <= 0 {
 		printUsageErrorAndExit("-message-load must be greater than 0")

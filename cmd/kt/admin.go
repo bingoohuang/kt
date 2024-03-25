@@ -49,7 +49,7 @@ func (r *adminCmd) parseArgs(as []string) {
 	r.version = kafkaVersion(a.version)
 	r.timeout = parseTimeout(a.timeout)
 	if err := r.auth.ReadConfigFile(a.auth); err != nil {
-		failStartup(err.Error())
+		failStartup(err)
 	}
 	r.brokers = ParseBrokers(a.brokers)
 	r.validateOnly = a.validateOnly

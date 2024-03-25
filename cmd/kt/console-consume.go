@@ -62,7 +62,7 @@ func (p *consoleConsumerCmd) run(args []string) {
 	var err error
 	sc.Version, err = kt.ParseKafkaVersion(p.version)
 	if err != nil {
-		failStartup(err.Error())
+		failStartup(err)
 	}
 	c, err := sarama.NewConsumer(p.brokers, sc)
 	if err != nil {
@@ -88,10 +88,10 @@ func (p *consoleConsumerCmd) run(args []string) {
 		close(closing)
 	}()
 
-	for _, partition := range partitionList {
-		pc, err := c.ConsumePartition(p.topic, partition, initialOffset)
+	for _, par := range partitionList {
+		pc, err := c.ConsumePartition(p.topic, par, initialOffset)
 		if err != nil {
-			printErrorAndExit(69, "Failed to start consumer for partition %d: %s", partition, err)
+			printErrorAndExit(69, "Failed to start consumer for partition %d: %s", par, err)
 		}
 
 		go func(pc sarama.PartitionConsumer) {
@@ -198,9 +198,8 @@ kt console-consume -help
 	}
 
 	p.brokers = kt.ParseBrokers(p.flagBrokers)
-	if p.topic, err = kt.ParseTopic(p.topic, true); err != nil {
-		failStartup(err.Error())
-	}
+	p.topic, err = kt.ParseTopic(p.topic, true)
+	failStartup(err)
 
 	if p.verbose {
 		sarama.Logger = p.logger

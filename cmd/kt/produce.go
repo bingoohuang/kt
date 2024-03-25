@@ -83,19 +83,16 @@ func (c *produceCmd) parseArgs(as []string) {
 	a := c.read(as)
 	c.topic = getKtTopic(a.topic, true)
 
-	if err := c.auth.ReadConfigFile(a.auth); err != nil {
-		failStartup(err.Error())
-	}
+	err := c.auth.ReadConfigFile(a.auth)
+	failStartup(err)
 
 	c.brokers = ParseBrokers(a.brokers)
 
-	var err error
-	if c.valDecoder, err = ParseStringDecoder(a.decVal); err != nil {
-		failStartup(err.Error())
-	}
-	if c.keyDecoder, err = ParseStringDecoder(a.decKey); err != nil {
-		failStartup(err.Error())
-	}
+	c.valDecoder, err = ParseStringDecoder(a.decVal)
+	failStartup(err)
+
+	c.keyDecoder, err = ParseStringDecoder(a.decKey)
+	failStartup(err)
 
 	c.batch = a.batch
 	c.timeout = a.timeout
