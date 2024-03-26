@@ -1,6 +1,7 @@
 package kt
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -9,6 +10,8 @@ import (
 	"os"
 
 	"github.com/IBM/sarama"
+	"github.com/bingoohuang/gg/pkg/mapstruct"
+	"github.com/bingoohuang/kt/pkg/tagparser"
 )
 
 type AuthConfig struct {
@@ -41,23 +44,31 @@ func (t *AuthConfig) ReadConfigFile(fileName string) error {
 		}
 	}
 
-	if err := json.Unmarshal(data, t); err != nil {
-		return fmt.Errorf("failed to unmarshal auth file, error %q", err)
+	if bytes.HasPrefix(data, []byte("{")) {
+		if err := json.Unmarshal(data, t); err != nil {
+			return fmt.Errorf("failed to unmarshal auth file, error %q", err)
+		}
+	} else {
+		tag := tagparser.ParseBytes(data)
+		if err := mapstruct.Decode(tag.Options, t); err != nil {
+			return fmt.Errorf("failed to unmarshal auth file, error %q", err)
+		}
 	}
 
 	return nil
 }
 
 func (t AuthConfig) SetupAuth(sc *sarama.Config) error {
-	switch t.Mode {
-	case "":
-		return nil
-	case "TLS":
-		return t.setupAuthTLS(sc)
-	case "TLS-1way":
-		return t.setupAuthTLS1Way(sc)
-	case "SASL":
+	switch {
+	case t.Mode == "SASL" || t.SASLUsr != "":
 		return t.setupSASL(sc)
+	case t.Mode == "TLS" || t.CACert != "":
+		return t.setupAuthTLS(sc)
+	case t.Mode == "TLS-1way":
+		return t.setupAuthTLS1Way(sc)
+
+	case t.Mode == "":
+		return nil
 	default:
 		return fmt.Errorf("unsupport auth mode: %#v", t.Mode)
 	}

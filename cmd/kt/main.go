@@ -36,7 +36,7 @@ You can find more details at https://github.com/bingoohuang/kt
 
 Ussage demo:
 1. 通用设置 brokers 和 topic
-    1. 通过环境变量: export KT_BROKERS=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092 KT_TOPIC=topic.test KT_VERSION=0.10.0.0 KT_AUTH='{"mode":"SASL","usr":"user","pwd":"123123"}'
+    1. 通过环境变量: export KT_BROKERS=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092 KT_TOPIC=topic.test KT_VERSION=0.10.0.0 KT_AUTH=usr:user,pwd:123123
     2. 通过命令参数: kt tail -brokers=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092 -topic elastic.backup -version 0.10.0.0，不方便的是，导致命令过长，每次执行，都得带上这两个参数
 2. 消费最新消息: kt tail
 3. 生产消息

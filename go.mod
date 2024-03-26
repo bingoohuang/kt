@@ -12,11 +12,13 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/samber/lo v1.39.0
 	github.com/stretchr/testify v1.9.0
+	github.com/vmihailenco/tagparser/v2 v2.0.0
 	golang.org/x/term v0.18.0
 )
 
 require (
 	github.com/Pallinder/go-randomdata v1.2.0 // indirect
+	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
 	github.com/bingoohuang/jiami v0.0.0-20221123002830-d9d1f5f029b4 // indirect
 	github.com/bingoohuang/q v0.0.0-20231229142535-a740579b1115 // indirect
 	github.com/brianvoe/gofakeit/v6 v6.28.0 // indirect
@@ -45,7 +47,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
-	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/exp v0.0.0-20240318143956-a85f2c67cd81 // indirect
 	golang.org/x/net v0.22.0 // indirect
