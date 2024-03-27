@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"regexp"
 
-	cluster "github.com/bingoohuang/elasticproxy/pkg/sarama-cluster"
+	cluster "github.com/bingoohuang/kt/pkg/sarama-cluster"
 )
 
 // This example shows how to use the consumer to read messages

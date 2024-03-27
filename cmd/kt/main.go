@@ -40,9 +40,9 @@ Ussage demo:
     2. 通过命令参数: kt tail -brokers=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092 -topic elastic.backup -version 0.10.0.0，不方便的是，导致命令过长，每次执行，都得带上这两个参数
 2. 消费最新消息: kt tail
 3. 生产消息
-    1. 直接消息：echo '你要发送的消息载荷' |  kt produce -literal
+    1. 直接消息：echo '你要发送的消息载荷' |  kt produce -literal -topic greetings
     2. 指定 key 和 partition : echo '{"key": "id-23", "value": "消息载荷", "partition": 0}' | kt produce -topic greetings
-    3. 使用 JJ 命令生成随机消息：JJ_N=3 jj -gu a=@姓名 b=@汉字 c=@性别 d=@地址 e=@手机 f=@身份证 g=@发证机关 h=@邮箱 i=@银行卡 j=@name k=@ksuid l=@objectId m='@random(男,女)' n='@random_int(20-60)' o='@random_time(yyyy-MM-dd)' p=@random_bool q='@regex([a-z]{5}@xyz[.]cn)' |  kt produce -literal
+    3. 使用 JJ 命令生成随机消息：N=3 jj -gu a=@姓名 b=@汉字 c=@性别 d=@地址 e=@手机 f=@身份证 g=@发证机关 h=@邮箱 i=@银行卡 j=@name k=@ksuid l=@objectId m='@random(男,女)' n='@random_int(20-60)' o='@random_time(yyyy-MM-dd)' p=@random_bool q='@regex([a-z]{5}@xyz[.]cn)' |  kt produce -literal -topic greetings
     4. 从文件中读取,每一行作为一个消息： cat p20w.txt | kt produce -literal -stats
 4. 生产消息性能压测
     1. 随机字符串写入压测: kt perf
