@@ -166,7 +166,7 @@ loop:
 
 		for _, tm := range res.Topics {
 			if tm.Name == c.topic {
-				if tm.Err != sarama.ErrNoError {
+				if !errors.Is(tm.Err, sarama.ErrNoError) {
 					log.Printf("Failed to get metadata from %#v. err=%v\n", addr, tm.Err)
 					continue loop
 				}
@@ -179,7 +179,7 @@ loop:
 					}
 
 					if err = b.Open(cfg); err != nil && errors.Is(err, sarama.ErrAlreadyConnected) {
-						failf("failed to open broker connection err=%s", err)
+						log.Printf("W! failed to open broker connection err=%s", err)
 					}
 					if connected, err := broker.Connected(); !connected && err != nil {
 						failf("failed to wait for broker connection to open err=%s", err)
