@@ -7,6 +7,7 @@ import (
 	"github.com/bingoohuang/gg/pkg/v"
 	_ "github.com/bingoohuang/godaemon/autoload"
 	. "github.com/bingoohuang/kt/pkg/kt"
+	_ "github.com/joho/godotenv/autoload"
 )
 
 var usageMessage = fmt.Sprintf(`kt is a tool for Kafka.
@@ -38,7 +39,7 @@ Ussage demo:
 1. 通用设置 brokers 和 topic
     1. 通过环境变量: export KT_BROKERS=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092 KT_TOPIC=topic.test KT_VERSION=0.10.0.0 KT_AUTH=usr:user,pwd:123123
     2. 通过命令参数: kt tail -brokers=192.168.1.1:9092,192.168.1.2:9092,192.168.1.3:9092 -topic elastic.backup -version 0.10.0.0，不方便的是，导致命令过长，每次执行，都得带上这两个参数
-2. 消费最新消息: kt tail
+2. 消费最新消息: kt tail (环境变量 CLEAN_MSG=1 清除转移符号）
 3. 生产消息
     1. 直接消息：echo '你要发送的消息载荷' |  kt produce -literal -topic greetings
     2. 指定 key 和 partition : echo '{"key": "id-23", "value": "消息载荷", "partition": 0}' | kt produce -topic greetings

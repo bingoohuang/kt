@@ -9,6 +9,7 @@ require (
 	github.com/bingoohuang/godaemon v0.0.0-20240322110523-6a8404a26d17
 	github.com/bingoohuang/jj v0.0.0-20240510072217-935482323048
 	github.com/elliotchance/pie/v2 v2.8.0
+	github.com/joho/godotenv v1.5.1
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.33.1
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475

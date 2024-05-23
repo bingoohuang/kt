@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -361,7 +362,7 @@ func (p *PrintMessageConsumer) Consume(m *sarama.ConsumerMessage) {
 		n, m.Topic, m.Offset, m.Partition, m.Key,
 		m.Timestamp.Format("2006-01-02 15:04:05.000"),
 		man.Bytes(uint64(len(m.Value))),
-		string(buf),
+		clean(string(buf), `\\`, `\`, `\"`, `"`),
 	)
 
 	if p.sseSender != nil {
@@ -371,12 +372,38 @@ func (p *PrintMessageConsumer) Consume(m *sarama.ConsumerMessage) {
 			Partition: strconv.FormatInt(int64(m.Partition), 10),
 			Key:       string(m.Key),
 			Timestamp: m.Timestamp.Format("2006-01-02 15:04:05.000"),
-			Message:   jj.GetBytes(buf, "value").Raw,
+			Message:   clean(jj.GetBytes(buf, "value").Raw, `\\`, `\`, `\"`, `"`),
 		}
 		b.MessageSize = man.Bytes(uint64(len(b.Message)))
 		e, _ := jsoni.MarshalToString(b)
 		p.sseSender.Send(e)
 	}
+}
+
+var cleanEnvFlag = os.Getenv("CLEAN_MSG") == "1"
+
+func clean(input string, pairs ...string) string {
+	if !cleanEnvFlag {
+		return input
+	}
+
+	for i := 0; i+1 < len(pairs); i += 2 {
+		input = replaceRecursive(input, pairs[i], pairs[i+1])
+	}
+
+	return input
+}
+
+func replaceRecursive(input, replace, new string) string {
+	// 检查字符串中是否包含 '\\'
+	if !strings.Contains(input, replace) {
+		return input
+
+	}
+	// 将 '\\' 替换为 '\'
+	input = strings.ReplaceAll(input, replace, new)
+	// 递归调用直到不包含 '\\'
+	return replaceRecursive(input, replace, new)
 }
 
 type sseBean struct {
