@@ -1,14 +1,23 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/bingoohuang/gg/pkg/v"
 	_ "github.com/bingoohuang/godaemon/autoload"
 	. "github.com/bingoohuang/kt/pkg/kt"
-	_ "github.com/joho/godotenv/autoload"
+	"github.com/joho/godotenv"
 )
+
+func init() {
+	env := cmp.Or(os.Getenv("ENV"), ".env")
+	if err := godotenv.Load(env); err != nil {
+		log.Printf("load env file %s err: %v", env, err)
+	}
+}
 
 var usageMessage = fmt.Sprintf(`kt is a tool for Kafka.
 Usage:
