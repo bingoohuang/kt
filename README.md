@@ -355,3 +355,9 @@ Example:
    库是由 [go-zero](https://github.com/zeromicro/go-zero) 团队针对于消息队列的封装，目前支持
    kafka、rabbitmq、stan、beanstalkd等。
 3. [Watermill Kafka Pub/Sub](https://github.com/ThreeDotsLabs/watermill-kafka) Kafka Pub/Sub for the Watermill project.
+4. sarama 库的问题：阿里云官方文档不推荐使用 sarama 库，[为什么不推荐使用 Sarama Go 客户端收发消息](https://help.aliyun.com/document_detail/266782.html)，这里简单列举下原文，其中解决方案对项目实践还是有些指导意义。所有Sarama Go版本客户端存在以下已知问题：
+    - 当Topic新增分区时，Sarama Go客户端无法感知并消费新增分区，需要客户端重启后，才能消费到新增分区。
+    - 当Sarama Go客户端同时订阅两个以上的Topic时，有可能会导致部分分区无法正常消费消息。
+    - 当Sarama Go客户端的消费位点重置策略设置为Oldest(earliest)时，如果客户端宕机或服务端版本升级，由于Sarama Go客户端自行实现OutOfRange机制，有可能会导致客户端从最小位点开始重新消费所有消息。
+    - 解决方案 建议尽早将Sarama Go客户端替换为Confluent Go客户端。 Confluent Go客户端的Demo地址，请访问 [kafka-confluent-go-demo](https://github.com/AliwareMQ/aliware-kafka-demos/tree/master/kafka-confluent-go-demo)。
+5. [一些关于 kafka 客户端库实践经验汇总](https://pandaychen.github.io/2022/02/08/A-KAFKA-USAGE-SUMUP-3/)
