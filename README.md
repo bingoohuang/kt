@@ -361,3 +361,4 @@ Example:
     - 当Sarama Go客户端的消费位点重置策略设置为Oldest(earliest)时，如果客户端宕机或服务端版本升级，由于Sarama Go客户端自行实现OutOfRange机制，有可能会导致客户端从最小位点开始重新消费所有消息。
     - 解决方案 建议尽早将Sarama Go客户端替换为Confluent Go客户端。 Confluent Go客户端的Demo地址，请访问 [kafka-confluent-go-demo](https://github.com/AliwareMQ/aliware-kafka-demos/tree/master/kafka-confluent-go-demo)。
 5. [一些关于 kafka 客户端库实践经验汇总](https://pandaychen.github.io/2022/02/08/A-KAFKA-USAGE-SUMUP-3/)
+6. Modern CLI for Apache Kafka, written in Go. [birdayz/kaf](https://github.com/birdayz/kaf)
